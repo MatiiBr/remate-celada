@@ -1,0 +1,269 @@
+import { Link } from "react-router-dom";
+import { useDatabase } from "../../helpers/hooks/useDatabase";
+import { useCallback, useEffect, useState } from "react";
+import {
+  PencilIcon,
+  TrashIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/solid";
+import { ControlledTextField } from "../../components/ControlledTextField";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import debounce from "debounce";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { Toaster } from "react-hot-toast";
+
+type Bundle = {
+  id: number;
+  number: number;
+  name: string;
+  observations: string;
+  seller_company: string;
+};
+
+const filterSchema = z.object({
+  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+});
+type FilterData = z.infer<typeof filterSchema>;
+
+export const Bundles = () => {
+  const { db, loading } = useDatabase();
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 15;
+
+  const { control, watch, resetField } = useForm<FilterData>({
+    resolver: zodResolver(filterSchema),
+    defaultValues: { name: "" },
+  });
+  const searchTerm = watch("name");
+
+  const _filters = (query: string) => {
+    let paramsQuerySQL = "";
+    let params: any[] = [];
+
+    if (query) {
+      paramsQuerySQL += " AND (name LIKE ? OR number LIKE ?)";
+      params.push(`%${query}%`, `%${query}%`);
+    }
+
+    return { params, paramsQuerySQL };
+  };
+
+  const loadBundles = async (query: string) => {
+    if (!db) return;
+    try {
+      const offset = (currentPage - 1) * pageSize;
+
+      const { params, paramsQuerySQL } = _filters(query);
+
+      const totalResult: any[] = await db.select(
+        `SELECT COUNT(*) as count FROM bundle WHERE deleted = 0${paramsQuerySQL}`,
+        params
+      );
+      const totalRecords = totalResult[0].count;
+      setTotalPages(Math.ceil(totalRecords / pageSize));
+
+      const result: any[] = await db.select(
+        `SELECT 
+          bundle.*, 
+          seller.company AS seller_company
+        FROM bundle
+        JOIN seller ON bundle.seller_id = seller.id
+        WHERE bundle.deleted = 0${paramsQuerySQL}
+        LIMIT ? OFFSET ?`,
+        [...params, pageSize, offset]
+      );
+
+      console.log("RESULTS BUNDLE", result);
+      setBundles(result);
+    } catch (error) {
+      console.error("Error al obtener lotes:", error);
+    }
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((query) => {
+      loadBundles(query);
+    }, 1000),
+    [db]
+  );
+
+  useEffect(() => {
+    loadBundles(searchTerm);
+  }, [db, currentPage]);
+
+  useEffect(() => {
+    debouncedSearch(searchTerm);
+  }, [searchTerm]);
+
+  const handleIconClick = () => {
+    resetField("name");
+  };
+
+  const handleClean = () => {
+    resetField("name");
+  };
+
+  const handleDelete = async (clientId: number) => {
+    const hasToDelete = await ask("El lote va a ser eliminado.", {
+      title: "Borrar lote",
+      kind: "warning",
+    });
+
+    if (hasToDelete) {
+      await db?.execute("UPDATE bundle SET deleted = 1 WHERE id = $1", [
+        clientId,
+      ]);
+    }
+    loadBundles(searchTerm);
+  };
+
+  return (
+    <div
+      className="mx-auto bg-white shadow-md"
+      style={{ height: "calc(100vh - 60px)" }}
+    >
+      <div className="flex p-6 justify-between items-center border-b-2 border-red-700">
+        <h1 className="text-2xl font-bold text-red-700">Lotes</h1>
+        <Link
+          to="/add-bundle"
+          className="py-2 px-3 bg-red-700 text-white font-semibold rounded"
+        >
+          Nuevo
+        </Link>
+      </div>
+      <div className="flex p-6 justify-between items-center">
+        <form className="flex gap-5 w-full">
+          <ControlledTextField
+            control={control}
+            label={""}
+            placeholder="Busca por número de lote o nombre"
+            name="name"
+            icon={<XMarkIcon className="size-6 text-red-700" />}
+            onIconClick={handleIconClick}
+            inputClassName="min-w-xs"
+          />
+          <button
+            onClick={handleClean}
+            className="py-2 px-3 ml-auto border border-red-700 text-red-700 cursor-pointer hover:bg-red-700 hover:text-white font-semibold rounded"
+          >
+            Limpiar
+          </button>
+        </form>
+      </div>
+      <div className="p-6">
+        {loading ? (
+          <p>Cargando...</p>
+        ) : bundles.length > 0 ? (
+          <>
+            <table className="table-auto w-full ">
+              <thead>
+                <tr className="bg-red-900">
+                  <th className="text-white px-4 py-2 rounded-tl-md">ID</th>
+                  <th className="text-white px-4 py-2 text-left">
+                    Nro. de Lote
+                  </th>
+                  <th className="text-white px-4 py-2 text-left">Nombre</th>
+                  <th className="text-white px-4 py-2 text-left">
+                    Observación
+                  </th>
+                  <th className="text-white px-4 py-2 text-left">Vendedor</th>
+                  <th className="text-white px-4 py-2 rounded-tr-md">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bundles.map((bundle, index) => (
+                  <tr
+                    key={index}
+                    className={`${
+                      index % 2 === 0
+                        ? "bg-red-100 hover:bg-red-300"
+                        : "bg-red-200 hover:bg-red-300"
+                    }`}
+                  >
+                    <td
+                      className={`text-black px-4 py-2 text-center ${
+                        (index + 1 === pageSize ||
+                          index + 1 === bundles.length) &&
+                        "rounded-bl-md"
+                      }`}
+                    >
+                      {index + 1}
+                    </td>
+                    <td className="text-black px-4 py-2">{bundle.number}</td>
+                    <td className="text-black px-4 py-2">{bundle.name}</td>
+                    <td className="text-black px-4 py-2">
+                      {bundle.observations}
+                    </td>
+                    <td className="text-black px-4 py-2">
+                      {bundle.seller_company}
+                    </td>
+                    <td
+                      className={`text-black px-4 py-2 ${
+                        (index + 1 === pageSize ||
+                          index + 1 === bundles.length) &&
+                        "rounded-br-md"
+                      }`}
+                    >
+                      <div className="flex gap-3 justify-center">
+                        <Link
+                          className="cursor-pointer"
+                          to={`/edit-bundle/${bundle.id}`}
+                        >
+                          <PencilIcon className="size-6 text-red-700" />
+                        </Link>
+                        <button
+                          className="cursor-pointer"
+                          onClick={() => handleDelete(bundle.id)}
+                        >
+                          <TrashIcon className="size-6 text-red-700" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex items-center justify-between p-3">
+              <p className="block text-sm text-red-700 font-medium">
+                Página {currentPage} de {totalPages}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                >
+                  <ChevronLeftIcon className="size-6" />
+                </button>
+                <button
+                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                >
+                  <ChevronRightIcon className="size-6" />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-red-500 font-bold">No hay lotes registrados.</p>
+        )}
+      </div>
+      <Toaster />
+    </div>
+  );
+};
