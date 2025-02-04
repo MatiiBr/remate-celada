@@ -14,9 +14,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import debounce from "debounce";
 import { ControlledSelectField } from "../../components/ControlledSelectField";
-import { provinces } from "../../helpers/Constants";
+import { PAGE_SIZE, provinces } from "../../helpers/Constants";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { Toaster } from "react-hot-toast";
+import { TableTopBar } from "../../components/TableTopBar";
+import { ContentLayout } from "../../components/ContentLayout";
 
 type Client = {
   id: number;
@@ -40,7 +42,7 @@ export const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 15;
+  
 
   const { control, watch, resetField } = useForm<FilterData>({
     resolver: zodResolver(filterSchema),
@@ -69,7 +71,7 @@ export const Clients = () => {
   const loadClients = async (query: string, provinceFilter: string) => {
     if (!db) return;
     try {
-      const offset = (currentPage - 1) * pageSize;
+      const offset = (currentPage - 1) * PAGE_SIZE;
 
       const { params, paramsQuerySQL } = _filters(query, provinceFilter);
 
@@ -78,11 +80,11 @@ export const Clients = () => {
         params
       );
       const totalRecords = totalResult[0].count;
-      setTotalPages(Math.ceil(totalRecords / pageSize));
+      setTotalPages(Math.ceil(totalRecords / PAGE_SIZE));
 
       const result: any[] = await db.select(
         `SELECT * FROM client WHERE deleted = 0${paramsQuerySQL} LIMIT ? OFFSET ?`,
-        [...params, pageSize, offset]
+        [...params, PAGE_SIZE, offset]
       );
 
       setClients(result);
@@ -130,19 +132,12 @@ export const Clients = () => {
   };
 
   return (
-    <div
-      className="mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
-      <div className="flex p-6 justify-between items-center border-b-2 border-red-700">
-        <h1 className="text-2xl font-bold text-red-700">Compradores</h1>
-        <Link
-          to="/add-client"
-          className="py-2 px-3 bg-red-700 text-white font-semibold rounded"
-        >
-          Nuevo
-        </Link>
-      </div>
+    <ContentLayout>
+      <TableTopBar
+        name={"Compradores"}
+        buttonLink={"/add-client"}
+        buttonLabel={"Nuevo"}
+      />
       <div className="flex p-6 justify-between items-center">
         <form className="flex gap-5 w-full">
           <ControlledTextField
@@ -173,7 +168,7 @@ export const Clients = () => {
           <p>Cargando...</p>
         ) : clients.length > 0 ? (
           <>
-            <table className="table-auto w-full ">
+            <table className="table-auto w-full">
               <thead>
                 <tr className="bg-red-900">
                   <th className="text-white px-4 py-2 rounded-tl-md">ID</th>
@@ -203,7 +198,7 @@ export const Clients = () => {
                   >
                     <td
                       className={`text-black px-4 py-2 text-center ${
-                        (index + 1 === pageSize ||
+                        (index + 1 === PAGE_SIZE ||
                           index + 1 === clients.length) &&
                         "rounded-bl-md"
                       }`}
@@ -221,7 +216,7 @@ export const Clients = () => {
                     <td className="text-black px-4 py-2">{client.city}</td>
                     <td
                       className={`text-black px-4 py-2 ${
-                        (index + 1 === pageSize ||
+                        (index + 1 === PAGE_SIZE ||
                           index + 1 === clients.length) &&
                         "rounded-br-md"
                       }`}
@@ -280,6 +275,6 @@ export const Clients = () => {
         )}
       </div>
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

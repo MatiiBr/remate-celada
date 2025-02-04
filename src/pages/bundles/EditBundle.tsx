@@ -10,6 +10,7 @@ import { PersistingTopBar } from "../../components/PersisistingTopBar";
 import { AsyncOption, ControlledAsyncSearchSelectField } from "../../components/ControlledAsyncSearchSelectField";
 import { ControlledNumberField } from "../../components/ControlledNumberField";
 import { ControlledTextAreaField } from "../../components/ControlledTextAreaField";
+import { ContentLayout } from "../../components/ContentLayout";
 
 const bundleSchema = z.object({
   number: z.coerce
@@ -115,10 +116,7 @@ export const EditBundle = () => {
     }
   };
   return (
-    <div
-      className="p-6 mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <ContentLayout>
       {loading ? (
         <p className="text-center text-gray-500">Cargando datos del lote...</p>
       ) : (
@@ -165,6 +163,6 @@ export const EditBundle = () => {
         </form>
       )}
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

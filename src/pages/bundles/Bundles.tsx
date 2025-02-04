@@ -15,8 +15,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import debounce from "debounce";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { Toaster } from "react-hot-toast";
+import { TableTopBar } from "../../components/TableTopBar";
+import { ContentLayout } from "../../components/ContentLayout";
+import { PAGE_SIZE } from "../../helpers/Constants";
 
-type Bundle = {
+export type Bundle = {
   id: number;
   number: number;
   name: string;
@@ -34,7 +37,7 @@ export const Bundles = () => {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 15;
+  
 
   const { control, watch, resetField } = useForm<FilterData>({
     resolver: zodResolver(filterSchema),
@@ -57,7 +60,7 @@ export const Bundles = () => {
   const loadBundles = async (query: string) => {
     if (!db) return;
     try {
-      const offset = (currentPage - 1) * pageSize;
+      const offset = (currentPage - 1) * PAGE_SIZE;
 
       const { params, paramsQuerySQL } = _filters(query);
 
@@ -66,7 +69,7 @@ export const Bundles = () => {
         params
       );
       const totalRecords = totalResult[0].count;
-      setTotalPages(Math.ceil(totalRecords / pageSize));
+      setTotalPages(Math.ceil(totalRecords / PAGE_SIZE));
 
       const result: any[] = await db.select(
         `SELECT 
@@ -76,7 +79,7 @@ export const Bundles = () => {
         JOIN seller ON bundle.seller_id = seller.id
         WHERE bundle.deleted = 0${paramsQuerySQL}
         LIMIT ? OFFSET ?`,
-        [...params, pageSize, offset]
+        [...params, PAGE_SIZE, offset]
       );
 
       console.log("RESULTS BUNDLE", result);
@@ -124,19 +127,12 @@ export const Bundles = () => {
   };
 
   return (
-    <div
-      className="mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
-      <div className="flex p-6 justify-between items-center border-b-2 border-red-700">
-        <h1 className="text-2xl font-bold text-red-700">Lotes</h1>
-        <Link
-          to="/add-bundle"
-          className="py-2 px-3 bg-red-700 text-white font-semibold rounded"
-        >
-          Nuevo
-        </Link>
-      </div>
+    <ContentLayout>
+      <TableTopBar
+        name={"Lotes"}
+        buttonLink={"/add-bundle"}
+        buttonLabel={"Nuevo"}
+      />
       <div className="flex p-6 justify-between items-center">
         <form className="flex gap-5 w-full">
           <ControlledTextField
@@ -190,7 +186,7 @@ export const Bundles = () => {
                   >
                     <td
                       className={`text-black px-4 py-2 text-center ${
-                        (index + 1 === pageSize ||
+                        (index + 1 === PAGE_SIZE ||
                           index + 1 === bundles.length) &&
                         "rounded-bl-md"
                       }`}
@@ -207,7 +203,7 @@ export const Bundles = () => {
                     </td>
                     <td
                       className={`text-black px-4 py-2 ${
-                        (index + 1 === pageSize ||
+                        (index + 1 === PAGE_SIZE ||
                           index + 1 === bundles.length) &&
                         "rounded-br-md"
                       }`}
@@ -264,6 +260,6 @@ export const Bundles = () => {
         )}
       </div>
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

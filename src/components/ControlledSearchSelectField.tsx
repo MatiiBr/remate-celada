@@ -9,8 +9,8 @@ export type Option = {
 interface Props {
   control: any;
   name: string;
-  label: string;
   options: Option[];
+  label?: string;
   placeholder?: string;
 }
 
@@ -23,7 +23,7 @@ export const ControlledSearchSelectField = ({
 }: Props) => {
   return (
     <div>
-      <label className="block text-black font-medium">{label}:</label>
+      {label && <label className="block text-black font-medium">{label}</label>}
       <Controller
         name={name}
         control={control}
@@ -38,9 +38,12 @@ export const ControlledSearchSelectField = ({
               control: (base, state) => ({
                 ...base,
                 minHeight: 42,
+                minWidth: 100,
                 borderRadius: "var(--radius-md)",
                 borderColor: "var(--color-neutral-200)",
-                boxShadow: state.isFocused ? "0 0 0 2px var(--color-red-500)" : "none",
+                boxShadow: state.isFocused
+                  ? "0 0 0 2px var(--color-red-500)"
+                  : "none",
                 "&:hover": {
                   borderColor: "var(--color-neutral-200)",
                   boxShadow: "0 0 0 2px var(--color-red-500)",

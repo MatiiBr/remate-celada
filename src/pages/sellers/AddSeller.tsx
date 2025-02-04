@@ -8,6 +8,7 @@ import { ControlledTextField } from "../../components/ControlledTextField";
 import { ControlledPhoneField } from "../../components/ControlledPhoneField";
 import { ControlledSelectField } from "../../components/ControlledSelectField";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
+import { ContentLayout } from "../../components/ContentLayout";
 
 const sellerSchema = z.object({
   company: z
@@ -75,10 +76,7 @@ export const AddSeller = () => {
   };
 
   return (
-    <div
-      className="p-6 mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <ContentLayout>
       <form onSubmit={handleSubmit(onSubmit, (errors) => console.log(errors))}>
         <PersistingTopBar to="/sellers" isSubmitting={isSubmitting}/>
         <div className="max-w-3xl mx-auto grid grid-cols-2 gap-4 mt-4">
@@ -137,6 +135,6 @@ export const AddSeller = () => {
         </div>
       </form>
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

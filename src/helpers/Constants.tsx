@@ -30,3 +30,7 @@ export const errorMessages = {
   email: "Ingrese un correo válido",
   minPhone: "Ingrese un número de teléfono válido",
 };
+
+export const PAGE_SIZE = 12
+
+export const SALE_STATUSES = ['EN VENTA', 'VENDIDO']

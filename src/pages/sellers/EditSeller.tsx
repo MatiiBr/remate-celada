@@ -10,6 +10,7 @@ import { ControlledPhoneField } from "../../components/ControlledPhoneField";
 import { ControlledSelectField } from "../../components/ControlledSelectField";
 import { useEffect, useState } from "react";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
+import { ContentLayout } from "../../components/ContentLayout";
 
 const sellerSchema = z.object({
   company: z
@@ -107,10 +108,7 @@ export const EditSeller = () => {
   };
 
   return (
-    <div
-      className="p-6 mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <ContentLayout>
       {loading ? (
         <p className="text-center text-gray-500">
           Cargando datos del vendedor...
@@ -174,6 +172,6 @@ export const EditSeller = () => {
         </form>
       )}
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

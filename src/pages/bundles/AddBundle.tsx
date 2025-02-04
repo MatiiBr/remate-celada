@@ -9,6 +9,7 @@ import { ControlledTextAreaField } from "../../components/ControlledTextAreaFiel
 import { ControlledAsyncSearchSelectField } from "../../components/ControlledAsyncSearchSelectField";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
 import { ControlledNumberField } from "../../components/ControlledNumberField";
+import { ContentLayout } from "../../components/ContentLayout";
 
 const bundleSchema = z.object({
   number: z.coerce
@@ -83,10 +84,7 @@ export const AddBundle = () => {
     }
   };
   return (
-    <div
-      className="p-6 mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <ContentLayout>
       <form onSubmit={handleSubmit(onSubmit, (errors) => console.log(errors))}>
         <PersistingTopBar to="/bundles" isSubmitting={isSubmitting} />
         <div className="max-w-3xl mx-auto grid grid-cols-2 gap-4 mt-4">
@@ -129,6 +127,6 @@ export const AddBundle = () => {
         </div>
       </form>
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };

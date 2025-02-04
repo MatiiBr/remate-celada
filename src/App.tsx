@@ -12,6 +12,10 @@ import { EditClient } from "./pages/clients/EditClient";
 import { Bundles } from "./pages/bundles/Bundles";
 import { AddBundle } from "./pages/bundles/AddBundle";
 import { EditBundle } from "./pages/bundles/EditBundle";
+import { Auctions } from "./pages/auctions/Auctions";
+import { AddAuction } from "./pages/auctions/AddAuction";
+import { EditAuction } from "./pages/auctions/EditAuction";
+import { AuctionBundles } from "./pages/auctions/AuctionBundles";
 
 function App() {
   return (
@@ -19,6 +23,10 @@ function App() {
       <Nav />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/auctions" element={<Auctions />} />
+        <Route path="/add-auction" element={<AddAuction />} />
+        <Route path="/edit-auction/:id" element={<EditAuction />} />
+        <Route path="/auction-bundles/:id" element={<AuctionBundles />} />
         <Route path="/sellers" element={<Sellers />} />
         <Route path="/add-seller" element={<AddSeller />} />
         <Route path="/edit-seller/:id" element={<EditSeller />} />

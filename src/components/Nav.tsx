@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { Logo } from "./Logo";
 
 export const Nav = () => {
   const location = useLocation();
@@ -9,9 +10,20 @@ export const Nav = () => {
       : "rounded-md px-3 py-2 text-sm font-medium text-black hover:bg-red-500 hover:text-white";
 
   return (
-    <nav className="bg-red-300 mx-auto py-3 px-6 flex items-baseline space-x-4">
+    <nav className="relative bg-red-300 mx-auto py-3 px-6 flex items-baseline space-x-4">
       <Link to="/" className={getLinkClass([""])} aria-current="page">
         Inicio
+      </Link>
+      <Link
+        to="/auctions"
+        className={getLinkClass([
+          "auctions",
+          "add-auction",
+          "edit-auction",
+          "auction-bundles",
+        ])}
+      >
+        Remates
       </Link>
       <Link
         to="/sellers"
@@ -25,12 +37,16 @@ export const Nav = () => {
       >
         Compradores
       </Link>
-      <Link to="/bundles" className={getLinkClass(["bundles", "add-bundle", "edit-bundle"])}>
+      <Link
+        to="/bundles"
+        className={getLinkClass(["bundles", "add-bundle", "edit-bundle"])}
+      >
         Lotes
       </Link>
       <Link to="/reports" className={getLinkClass(["reports"])}>
         Reportes
       </Link>
+      <Logo />
     </nav>
   );
 };

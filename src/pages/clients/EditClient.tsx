@@ -10,6 +10,7 @@ import { ControlledPhoneField } from "../../components/ControlledPhoneField";
 import { ControlledSelectField } from "../../components/ControlledSelectField";
 import { useEffect, useState } from "react";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
+import { ContentLayout } from "../../components/ContentLayout";
 
 const clientSchema = z.object({
   company: z
@@ -107,17 +108,14 @@ export const EditClient = () => {
   };
 
   return (
-    <div
-      className="p-6 mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <ContentLayout>
       {loading ? (
         <p className="text-center text-gray-500">
           Cargando datos del comprador...
         </p>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <PersistingTopBar to="/clients" isSubmitting={isSubmitting}/>
+          <PersistingTopBar to="/clients" isSubmitting={isSubmitting} />
           <div className="max-w-3xl mx-auto grid grid-cols-2 gap-4 mt-4">
             <ControlledTextField
               className="col-span-2"
@@ -174,6 +172,6 @@ export const EditClient = () => {
         </form>
       )}
       <Toaster />
-    </div>
+    </ContentLayout>
   );
 };
