@@ -4,9 +4,9 @@ import { Logo } from "../components/Logo";
 export const Home = () => {
   return (
     <ContentLayout>
-      <div className="h-full w-full flex justify-center items-center">
-        <Logo className="min-h-[200px]" />
-      </div>
-    </ContentLayout>
+    <div className="min-h-[calc(100vh-60px)] flex justify-center items-center">
+      <Logo className="w-auto h-32" />
+    </div>
+  </ContentLayout>
   );
 };

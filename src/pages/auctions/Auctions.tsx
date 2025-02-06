@@ -1,6 +1,7 @@
 import {
   ArrowUturnLeftIcon,
   DocumentTextIcon,
+  FlagIcon,
   PauseIcon,
   PencilIcon,
   PlayIcon,
@@ -31,6 +32,7 @@ import {
   handleResume,
   handleRestore,
   handleInit,
+  handleEnd
 } from "../../helpers/auctionActions";
 import { es } from "date-fns/locale";
 import { ControlledTextField } from "../../components/ControlledTextField";
@@ -117,6 +119,8 @@ export const Auctions = () => {
       );
 
       setAuctions(result);
+
+   
     } catch (error) {
       console.error("Error al obtener remates:", error);
     }
@@ -379,6 +383,24 @@ export const Auctions = () => {
                             }
                           >
                             <TrashIcon className="size-6 text-red-700" />
+                          </button>
+                        )}
+                        {auction.status === AUCTION_STATUSES.EN_CURSO && (
+                          <button
+                            className="cursor-pointer"
+                            title="Finalizar"
+                            onClick={() =>
+                              handleEnd(
+                                db,
+                                auction.id,
+                                loadAuctions,
+                                searchTerm,
+                                selectedProvince,
+                                selectedStatus
+                              )
+                            }
+                          >
+                            <FlagIcon className="size-6 text-red-700" />
                           </button>
                         )}
                       </div>
