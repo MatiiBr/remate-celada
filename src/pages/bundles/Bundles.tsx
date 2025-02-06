@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   PencilIcon,
   TrashIcon,
-  ChevronRightIcon,
-  ChevronLeftIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
 import { ControlledTextField } from "../../components/ControlledTextField";
@@ -18,6 +16,11 @@ import { Toaster } from "react-hot-toast";
 import { TableTopBar } from "../../components/TableTopBar";
 import { ContentLayout } from "../../components/ContentLayout";
 import { PAGE_SIZE } from "../../helpers/Constants";
+import {
+  AsyncOption,
+  ControlledAsyncSearchSelectField,
+} from "../../components/ControlledAsyncSearchSelectField";
+import { TablePagination } from "../../components/TablePagination";
 
 export type Bundle = {
   id: number;
@@ -25,10 +28,15 @@ export type Bundle = {
   name: string;
   observations: string;
   seller_company: string;
+  auction_name: string;
 };
 
 const filterSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
+  auction: z.object({
+    value: z.number(),
+    label: z.string(),
+  }),
 });
 type FilterData = z.infer<typeof filterSchema>;
 
@@ -37,32 +45,37 @@ export const Bundles = () => {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
 
   const { control, watch, resetField } = useForm<FilterData>({
     resolver: zodResolver(filterSchema),
     defaultValues: { name: "" },
   });
   const searchTerm = watch("name");
+  const auctionField = watch("auction");
 
-  const _filters = (query: string) => {
+  const _filters = (query: string, auctionField: AsyncOption) => {
     let paramsQuerySQL = "";
     let params: any[] = [];
 
     if (query) {
-      paramsQuerySQL += " AND (name LIKE ? OR number LIKE ?)";
+      paramsQuerySQL += " AND (bundle.name LIKE ? OR bundle.number LIKE ?)";
       params.push(`%${query}%`, `%${query}%`);
+    }
+
+    if (auctionField) {
+      paramsQuerySQL += " AND bundle.auction_id = ?";
+      params.push(auctionField.value);
     }
 
     return { params, paramsQuerySQL };
   };
 
-  const loadBundles = async (query: string) => {
+  const loadBundles = async (query: string, auctionField: AsyncOption) => {
     if (!db) return;
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
 
-      const { params, paramsQuerySQL } = _filters(query);
+      const { params, paramsQuerySQL } = _filters(query, auctionField);
 
       const totalResult: any[] = await db.select(
         `SELECT COUNT(*) as count FROM bundle WHERE deleted = 0${paramsQuerySQL}`,
@@ -74,9 +87,11 @@ export const Bundles = () => {
       const result: any[] = await db.select(
         `SELECT 
           bundle.*, 
-          seller.company AS seller_company
+          seller.company AS seller_company,
+          auction.name AS auction_name
         FROM bundle
         JOIN seller ON bundle.seller_id = seller.id
+        JOIN auction ON bundle.auction_id = auction.id
         WHERE bundle.deleted = 0${paramsQuerySQL}
         LIMIT ? OFFSET ?`,
         [...params, PAGE_SIZE, offset]
@@ -89,20 +104,40 @@ export const Bundles = () => {
     }
   };
 
+  const loadAuctions = async (
+    inputValue: string = ""
+  ): Promise<AsyncOption[]> => {
+    if (!db) return [];
+    try {
+      const result: any[] = await db.select(
+        "SELECT id, name FROM auction WHERE name LIKE ? ",
+        [`%${inputValue}%`]
+      );
+
+      return result.map((auction) => ({
+        value: auction.id,
+        label: auction.name,
+      }));
+    } catch (error) {
+      console.error("Error al obtener remates:", error);
+      return [];
+    }
+  };
+
   const debouncedSearch = useCallback(
-    debounce((query) => {
-      loadBundles(query);
-    }, 1000),
+    debounce((query, auctionField) => {
+      loadBundles(query, auctionField);
+    }, 500),
     [db]
   );
 
   useEffect(() => {
-    loadBundles(searchTerm);
+    loadBundles(searchTerm, auctionField);
   }, [db, currentPage]);
 
   useEffect(() => {
-    debouncedSearch(searchTerm);
-  }, [searchTerm]);
+    debouncedSearch(searchTerm, auctionField);
+  }, [searchTerm, auctionField]);
 
   const handleIconClick = () => {
     resetField("name");
@@ -123,7 +158,7 @@ export const Bundles = () => {
         clientId,
       ]);
     }
-    loadBundles(searchTerm);
+    loadBundles(searchTerm, auctionField);
   };
 
   return (
@@ -143,6 +178,13 @@ export const Bundles = () => {
             icon={<XMarkIcon className="size-6 text-red-700" />}
             onIconClick={handleIconClick}
             inputClassName="min-w-xs"
+          />
+          <ControlledAsyncSearchSelectField
+            className="col-span-2"
+            control={control}
+            name="auction"
+            placeholder="Selecciona un remate"
+            loadOptions={loadAuctions}
           />
           <button
             onClick={handleClean}
@@ -164,6 +206,7 @@ export const Bundles = () => {
                   <th className="text-white px-4 py-2 text-left">
                     Nro. de Lote
                   </th>
+                  <th className="text-white px-4 py-2 text-left">Remate</th>
                   <th className="text-white px-4 py-2 text-left">Nombre</th>
                   <th className="text-white px-4 py-2 text-left">
                     Observación
@@ -194,6 +237,9 @@ export const Bundles = () => {
                       {index + 1}
                     </td>
                     <td className="text-black px-4 py-2">{bundle.number}</td>
+                    <td className="text-black px-4 py-2">
+                      {bundle.auction_name}
+                    </td>
                     <td className="text-black px-4 py-2">{bundle.name}</td>
                     <td className="text-black px-4 py-2">
                       {bundle.observations}
@@ -227,33 +273,14 @@ export const Bundles = () => {
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between p-3">
-              <p className="block text-sm text-red-700 font-medium">
-                Página {currentPage} de {totalPages}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                >
-                  <ChevronLeftIcon className="size-6" />
-                </button>
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                >
-                  <ChevronRightIcon className="size-6" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              prevPage={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              nextPage={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+            />
           </>
         ) : (
           <p className="text-red-500 font-bold">No hay lotes registrados.</p>

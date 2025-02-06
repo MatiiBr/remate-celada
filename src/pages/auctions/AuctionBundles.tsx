@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ContentLayout } from "../../components/ContentLayout";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
 import { useDatabase } from "../../helpers/hooks/useDatabase";
@@ -19,6 +19,7 @@ import {
 } from "../../components/ControlledSearchSelectField";
 import debounce from "debounce";
 import {
+  AUCTION_STATUSES,
   AuctionStatus,
   auctionStatusBadgeClasses,
 } from "../../helpers/auctionConstants";
@@ -69,8 +70,8 @@ export const AuctionBundles = () => {
     let params: any[] = [];
 
     if (name) {
-      paramsQuerySQL += " AND b.name LIKE ?";
-      params.push(`%${name}%`);
+      paramsQuerySQL += " AND (b.name LIKE ? OR b.number LIKE ?)";
+      params.push(`%${name}%`, `%${name}%`);
     }
 
     if (status) {
@@ -157,7 +158,6 @@ export const AuctionBundles = () => {
         LIMIT ? OFFSET ?;`,
         [id, ...params, PAGE_SIZE, offset]
       );
-      console.log("bundlesResult", bundlesResult);
 
       const totalResult: any[] = await db.select(
         `SELECT COUNT(*) AS count
@@ -213,7 +213,7 @@ export const AuctionBundles = () => {
   const debouncedSearch = useCallback(
     debounce((nameField) => {
       fetchBundlesFromAuction(nameField);
-    }, 1000),
+    }, 500),
     [db]
   );
 
@@ -249,7 +249,7 @@ export const AuctionBundles = () => {
           <ControlledTextField
             control={control}
             label={""}
-            placeholder="Busca por nombre"
+            placeholder="Busca por nombre o numero de lote"
             name="name"
             icon={<XMarkIcon className="size-6 text-red-700" />}
             onIconClick={handleIconClick}
@@ -274,12 +274,23 @@ export const AuctionBundles = () => {
             options={clientOptions!}
             placeholder="Selecciona un comprador"
           />
-          <button
-            onClick={handleClean}
-            className="py-2 px-3 ml-auto border border-red-700 text-red-700 cursor-pointer hover:bg-red-700 hover:text-white font-semibold rounded"
-          >
-            Limpiar
-          </button>
+
+          <div className="ml-auto flex gap-3">
+            {auction?.status === AUCTION_STATUSES.EN_CURSO && (
+              <Link
+                to={`/sales/${id}`}
+                className="py-2 px-3  border border-red-700 text-white cursor-pointer bg-red-700 hover:bg-white hover:text-red-700 font-semibold rounded"
+              >
+                Cargar ventas
+              </Link>
+            )}
+            <button
+              onClick={handleClean}
+              className="py-2 px-3  border border-red-700 text-red-700 cursor-pointer hover:bg-red-700 hover:text-white font-semibold rounded"
+            >
+              Limpiar
+            </button>
+          </div>
         </form>
       </div>
       <div className="p-6">

@@ -21,6 +21,7 @@ export const Nav = () => {
           "add-auction",
           "edit-auction",
           "auction-bundles",
+          "sales"
         ])}
       >
         Remates

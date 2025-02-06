@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   PencilIcon,
   TrashIcon,
-  ChevronRightIcon,
-  ChevronLeftIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
 import { ControlledTextField } from "../../components/ControlledTextField";
@@ -19,6 +17,7 @@ import { ask } from "@tauri-apps/plugin-dialog";
 import { Toaster } from "react-hot-toast";
 import { TableTopBar } from "../../components/TableTopBar";
 import { ContentLayout } from "../../components/ContentLayout";
+import { TablePagination } from "../../components/TablePagination";
 
 type Seller = {
   id: number;
@@ -42,7 +41,6 @@ export const Sellers = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
 
   const { control, watch, resetField } = useForm<FilterData>({
     resolver: zodResolver(filterSchema),
@@ -96,7 +94,7 @@ export const Sellers = () => {
   const debouncedSearch = useCallback(
     debounce((query, province) => {
       loadSellers(query, province);
-    }, 1000),
+    }, 500),
     [db]
   );
 
@@ -240,33 +238,14 @@ export const Sellers = () => {
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between p-3">
-              <p className="block text-sm text-red-700 font-medium">
-                Página {currentPage} de {totalPages}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                >
-                  <ChevronLeftIcon className="size-6" />
-                </button>
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                >
-                  <ChevronRightIcon className="size-6" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              prevPage={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              nextPage={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+            />
           </>
         ) : (
           <p className="text-red-500 font-bold">

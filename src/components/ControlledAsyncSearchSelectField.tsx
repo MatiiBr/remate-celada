@@ -1,6 +1,6 @@
 import { Controller } from "react-hook-form";
 import AsyncSelect from "react-select/async";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 
 export type AsyncOption = {
   value: number;
@@ -10,9 +10,10 @@ export type AsyncOption = {
 interface Props {
   control: any;
   name: string;
-  label: string;
-  placeholder?: string;
   loadOptions: (inputValue: string) => Promise<AsyncOption[]>;
+  label?: string | ReactNode;
+  placeholder?: string;
+  className?: string;
 }
 
 export const ControlledAsyncSearchSelectField = ({
@@ -20,6 +21,7 @@ export const ControlledAsyncSearchSelectField = ({
   name,
   label,
   placeholder,
+  className,
   loadOptions,
 }: Props) => {
   const [options, setOptions] = useState<AsyncOption[]>([]);
@@ -36,8 +38,8 @@ export const ControlledAsyncSearchSelectField = ({
   };
 
   return (
-    <div>
-      <label className="block text-black font-medium">{label}:</label>
+    <div className={className}>
+      {label && <label className="block text-black font-medium">{label}</label>}
       <Controller
         name={name}
         control={control}

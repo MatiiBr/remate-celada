@@ -4,7 +4,7 @@ import Select from "react-select";
 export type Option = {
   label: string;
   value: string;
-};
+}
 
 interface Props {
   control: any;

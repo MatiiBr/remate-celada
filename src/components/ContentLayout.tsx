@@ -7,8 +7,8 @@ interface Prop {
 export const ContentLayout = ({ children }: Prop) => {
   return (
     <div
-      className="mx-auto bg-white shadow-md"
-      style={{ height: "calc(100vh - 60px)" }}
+      className="mx-auto bg-white shadow-md h-full"
+      style={{ minHeight: "calc(100vh - 60px)" }}
     >
       {children}
     </div>

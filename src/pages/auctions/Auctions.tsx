@@ -1,7 +1,5 @@
 import {
   ArrowUturnLeftIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   DocumentTextIcon,
   PauseIcon,
   PencilIcon,
@@ -38,6 +36,7 @@ import { es } from "date-fns/locale";
 import { ControlledTextField } from "../../components/ControlledTextField";
 import { PAGE_SIZE, provinces } from "../../helpers/Constants";
 import { ControlledSelectField } from "../../components/ControlledSelectField";
+import { TablePagination } from "../../components/TablePagination";
 
 export type Auction = {
   id: number;
@@ -60,7 +59,6 @@ export const Auctions = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
 
   const { control, watch, resetField } = useForm<FilterData>({
     resolver: zodResolver(filterSchema),
@@ -127,7 +125,7 @@ export const Auctions = () => {
   const debouncedSearch = useCallback(
     debounce((query, province, selectedStatus) => {
       loadAuctions(query, province, selectedStatus);
-    }, 1000),
+    }, 500),
     [db]
   );
 
@@ -389,33 +387,14 @@ export const Auctions = () => {
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between p-3">
-              <p className="block text-sm text-red-700 font-medium">
-                Página {currentPage} de {totalPages}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                >
-                  <ChevronLeftIcon className="size-6" />
-                </button>
-                <button
-                  className="rounded cursor-pointer border border-red-300 py-2.5 px-3 text-center text-xs font-semibold text-red-600 transition-all hover:opacity-75 focus:ring focus:ring-red-700 active:opacity-[0.85] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                >
-                  <ChevronRightIcon className="size-6" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              prevPage={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              nextPage={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+            />
           </>
         ) : (
           <p className="text-red-500 font-bold">No hay remates registrados.</p>

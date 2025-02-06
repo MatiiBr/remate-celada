@@ -31,7 +31,7 @@ export const ControlledNumberField = ({
                 type="number"
                 placeholder={placeholder}
                 min={1}
-                className={`w-full px-4 py-2 border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 ${inputClassName}`}
+                className={`w-full px-4 py-2 border bg-white border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 ${inputClassName}`}
               />
               {error && <p className="text-red-500 text-sm">{error.message}</p>}
             </>

@@ -21,6 +21,10 @@ const bundleSchema = z.object({
     value: z.number(),
     label: z.string(),
   }),
+  auction: z.object({
+    value: z.number(),
+    label: z.string(),
+  }),
 });
 
 type BundleFormData = z.infer<typeof bundleSchema>;
@@ -37,7 +41,9 @@ export const AddBundle = () => {
     resolver: zodResolver(bundleSchema),
   });
 
-  const loadSellers = async (inputValue: string = ""): Promise<AsyncOption[]> => {
+  const loadSellers = async (
+    inputValue: string = ""
+  ): Promise<AsyncOption[]> => {
     if (!db) return [];
     try {
       const result: any[] = await db.select(
@@ -55,18 +61,45 @@ export const AddBundle = () => {
     }
   };
 
+  const loadAuctions = async (
+    inputValue: string = ""
+  ): Promise<AsyncOption[]> => {
+    if (!db) return [];
+    try {
+      const result: any[] = await db.select(
+        "SELECT id, name FROM auction WHERE name LIKE ? ",
+        [`%${inputValue}%`]
+      );
+
+      return result.map((auction) => ({
+        value: auction.id,
+        label: auction.name,
+      }));
+    } catch (error) {
+      console.error("Error al obtener remates:", error);
+      return [];
+    }
+  };
+
   const onSubmit = async (data: BundleFormData) => {
     if (!db) return;
     try {
       console.log("DATA", data);
       await db.execute(
-        "INSERT INTO bundle (number, name, observations, seller_id) VALUES (?1, ?2, ?3, ?4);",
-        [data.number, data.name, data.observations, data.seller.value]
+        "INSERT INTO bundle (number, name, observations, seller_id, auction_id) VALUES (?1, ?2, ?3, ?4, ?5);",
+        [
+          data.number,
+          data.name,
+          data.observations,
+          data.seller.value,
+          data.auction.value,
+        ]
       );
 
       reset({
-        number: data.number + 1, 
+        number: data.number + 1,
         seller: data.seller,
+        auction: data.auction,
         name: "",
         observations: "",
       });
@@ -88,6 +121,18 @@ export const AddBundle = () => {
       <form onSubmit={handleSubmit(onSubmit, (errors) => console.log(errors))}>
         <PersistingTopBar to="/bundles" isSubmitting={isSubmitting} />
         <div className="max-w-3xl mx-auto grid grid-cols-2 gap-4 mt-4">
+          <ControlledAsyncSearchSelectField
+            className="col-span-2"
+            control={control}
+            name="auction"
+            label={
+              <>
+                Remate:<span className="text-red-600">*</span>
+              </>
+            }
+            placeholder="Selecciona un remate"
+            loadOptions={loadAuctions}
+          />
           <ControlledNumberField
             control={control}
             label={

@@ -96,7 +96,7 @@ export const Clients = () => {
   const debouncedSearch = useCallback(
     debounce((query, province) => {
       loadClients(query, province);
-    }, 1000),
+    }, 500),
     [db]
   );
 
