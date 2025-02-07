@@ -149,7 +149,8 @@ export const AuctionBundles = () => {
             se.company AS seller_company, 
             c.company AS client_company, 
             s.sold_price, 
-            s.sold AS sale_sold
+            s.sold AS sale_sold,
+            s.deadline
         FROM bundle b
         JOIN seller se ON b.seller_id = se.id
         LEFT JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
@@ -320,6 +321,9 @@ export const AuctionBundles = () => {
                   <th className="text-white px-4 py-2 text-left">Vendedor</th>
                   <th className="text-white px-4 py-2 text-left">Estado</th>
                   <th className="text-white px-4 py-2 text-left">Comprador</th>
+                  <th className="text-white px-4 py-2 text-left">
+                    Plazo
+                  </th>
                   <th className="text-white px-4 py-2 text-left rounded-tr-md">
                     Precio
                   </th>
@@ -360,6 +364,9 @@ export const AuctionBundles = () => {
                     </td>
                     <td className={`text-black px-4 py-2`}>
                       {bundle.client_company || "-"}
+                    </td>
+                    <td className={`text-black px-4 py-2`}>
+                      {bundle.deadline || "-"}
                     </td>
                     <td
                       className={`text-black px-4 py-2 ${

@@ -1,6 +1,8 @@
 import Database from "@tauri-apps/plugin-sql";
-import { saveExcel } from "../saveExcel";
 import { Option } from "../../components/ControlledSearchSelectField";
+import { AuctionTemplateData } from "./auctionSellerReport";
+import { savePdfFromHtml } from "../savePDF";
+import { auctionSalesTemplate } from "../templates/auctionSellerTemplate";
 
 export const auctionClientReport = async (
   db: Database | null,
@@ -12,16 +14,18 @@ export const auctionClientReport = async (
   try {
     const salesResult: any[] = await db.select(
       `SELECT 
-            b.number AS Lote,
-            b.name AS Producto,
-            se.company AS Vendedor, 
-            c.company AS Comprador,
-            s.sold_price AS Precio
+            b.number,
+            b.name,
+            c.company,
+            s.sold_price,
+            a.date
         FROM bundle b
         JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
         JOIN client c ON s.client_id = c.id
-        JOIN seller se ON b.seller_id = se.id
-        WHERE b.auction_id = ? AND s.client_id = ?;`,
+        LEFT JOIN auction a ON b.auction_id = a.id
+        WHERE b.auction_id = ? AND s.client_id = ?
+        ORDER BY b.number ASC;
+      `,
       [selectedAuction.value, selectedClient.value]
     );
 
@@ -32,29 +36,27 @@ export const auctionClientReport = async (
       return;
     }
 
-    const totalSalesResult: any[] = await db.select(
-      `SELECT SUM(s.sold_price) AS Total_Compras
-        FROM sales s
-        JOIN bundle b ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-        WHERE b.auction_id = ? AND s.client_id = ?;`,
-      [selectedAuction.value, selectedClient.value]
+    const formattedSalesResult: AuctionTemplateData[] = salesResult.map(
+      (res) => {
+        return {
+          quantity: 1,
+          deadline: "12 CTAS",
+          ...res,
+        };
+      }
     );
 
-    const totalSales = totalSalesResult[0]?.Total_Ventas || 0;
+    const now = new Date();
+    const formattedDate = `${String(now.getDate()).padStart(2, "0")}${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}${now.getFullYear()}_${String(now.getHours()).padStart(
+      2,
+      "0"
+    )}${String(now.getMinutes()).padStart(2, "0")}`;
 
-    salesResult.push({
-      Lote: "",
-      Producto: "Total Comprado",
-      Vendedor: "",
-      Comprador: "",
-      Precio: totalSales.toFixed(2), 
-    });
-
-    await saveExcel(
-      salesResult,
-      "Reporte de Compras",
-      "Guardar Reporte de Compras",
-      `reporte_compras_${selectedClient.label}`
+    await savePdfFromHtml(
+      auctionSalesTemplate(formattedSalesResult, "client"),
+      `CCR_${selectedAuction.value}_${formattedDate}`
     );
   } catch (error) {
     console.error("Error al generar el reporte de cliente:", error);

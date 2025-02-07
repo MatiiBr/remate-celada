@@ -42,7 +42,7 @@ export const AuctionClientsReport = ({ db }: Prop) => {
     const fetchFilters = async () => {
       try {
         const auctions: any[] = await db.select(
-          `SELECT id, name FROM auction WHERE deleted = 0`
+          `SELECT id, name FROM auction WHERE deleted = 0 AND status = 'FINALIZADO'`
         );
 
         setAuctionOptions(

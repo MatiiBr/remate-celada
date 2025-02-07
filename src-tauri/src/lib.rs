@@ -71,6 +71,7 @@ pub fn run() {
                     client_id INTEGER,
                     sold_price REAL,
                     sold INTEGER DEFAULT(0),
+                    deadline TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (bundle_id) REFERENCES bundle(id) ON DELETE CASCADE ON UPDATE CASCADE,

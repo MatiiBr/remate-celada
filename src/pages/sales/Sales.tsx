@@ -35,6 +35,12 @@ const salesSchema = z.object({
           label: z.string(),
         })
         .optional(),
+      deadline: z
+        .object({
+          value: z.number(),
+          label: z.string(),
+        })
+        .optional(),
       price: z.coerce.number().min(1, "El precio debe ser mayor a 0"),
     })
   ),
@@ -51,6 +57,14 @@ const filterSchema = z.object({
 type FilterData = z.infer<typeof filterSchema>;
 type SalesFormData = z.infer<typeof salesSchema>;
 
+const deadlines: Option[] = [
+  { label: "0 - 30 DIAS", value: "0 - 30 DIAS" },
+  { label: "6 CHEQUES", value: "6 CHEQUES" },
+  { label: "8 CHEQUES", value: "8 CHEQUES" },
+  { label: "10 CHEQUES", value: "10 CHEQUES" },
+  { label: "12 CHEQUES", value: "12 CHEQUES" },
+];
+
 export const Sales = () => {
   const { db } = useDatabase();
   const { auctionId } = useParams();
@@ -66,7 +80,11 @@ export const Sales = () => {
   const [totalPages, setTotalPages] = useState(1);
   const PAGE_SIZE = 12;
 
-  const { control: saleControl, getValues, setValue } = useForm<SalesFormData>({
+  const {
+    control: saleControl,
+    getValues,
+    setValue,
+  } = useForm<SalesFormData>({
     resolver: zodResolver(salesSchema),
     defaultValues: { bundles: [] },
   });
@@ -135,7 +153,8 @@ export const Sales = () => {
       const bundlesResult: any[] = await db.select(
         `SELECT 
           b.id, b.number, b.name, 
-          s.sold_price, s.client_id, c.company AS client_name, 
+          s.sold_price, s.client_id, s.deadline,
+          c.company AS client_name, 
           se.company AS seller_company
          FROM bundle b
          JOIN seller se ON b.seller_id = se.id
@@ -177,8 +196,9 @@ export const Sales = () => {
 
     const client = getValues(`bundles.${bundleIndex}.client`);
     const price = getValues(`bundles.${bundleIndex}.price`);
+    const deadline = getValues(`bundles.${bundleIndex}.deadline`);
 
-    if (!client || !price) {
+    if (!client || !price || !deadline) {
       toast.error("Debe seleccionar un comprador y un precio", {
         position: "top-center",
       });
@@ -187,10 +207,19 @@ export const Sales = () => {
 
     try {
       await db.execute(
-        `INSERT INTO sales (bundle_id, auction_id, client_id, sold_price, sold) 
-         VALUES (?, ?, ?, ?, 1)
-         ON CONFLICT(bundle_id, auction_id) DO UPDATE SET client_id = ?, sold_price = ?`,
-        [bundleId, auctionId, client.value, price, client.value, price]
+        `INSERT INTO sales (bundle_id, auction_id, client_id, sold_price, deadline, sold) 
+         VALUES (?, ?, ?, ?, ?, 1)
+         ON CONFLICT(bundle_id, auction_id) DO UPDATE SET client_id = ?, sold_price = ?, deadline = ?`,
+        [
+          bundleId,
+          auctionId,
+          client.value,
+          price,
+          deadline.value,
+          client.value,
+          price,
+          deadline.value,
+        ]
       );
 
       toast.success("Venta guardada correctamente");
@@ -219,10 +248,18 @@ export const Sales = () => {
         }
       : undefined;
 
-    console.log("EX", existingClient);
-
+    const deadline = bundles[bundleIndex]?.deadline
+      ? {
+          value: bundles[bundleIndex]?.deadline,
+          label: bundles[bundleIndex]?.deadline,
+        }
+      : undefined;
     setValue(`bundles.${bundleIndex}.client`, existingClient);
-    setValue(`bundles.${bundleIndex}.price`, bundles[bundleIndex]?.sold_price || "");
+    setValue(
+      `bundles.${bundleIndex}.price`,
+      bundles[bundleIndex]?.sold_price || ""
+    );
+    setValue(`bundles.${bundleIndex}.deadline`, deadline);
   };
 
   const handleCancelEdition = (bundleId: number) => {
@@ -281,6 +318,7 @@ export const Sales = () => {
                   <th className="text-white px-4 py-2 text-left">Vendedor</th>
                   <th className="text-white px-4 py-2 text-left">Comprador</th>
                   <th className="text-white px-4 py-2 text-left">Precio</th>
+                  <th className="text-white px-4 py-2 text-left">Plazo</th>
                   <th className="text-white px-4 py-2 text-left w-min rounded-tr-md">
                     Acciones
                   </th>
@@ -301,44 +339,40 @@ export const Sales = () => {
                     <td className="px-4 py-2">{bundle.name}</td>
                     <td className="px-4 py-2">{bundle.seller_company}</td>
                     <td className="px-4 py-2">
-                      {bundle.client_name &&
-                        !editMode[bundle.id] &&
-                        bundle.client_name}
-                      {!bundle.client_name && !editMode[bundle.id] && (
+                      {editMode[bundle.id] || !bundle.sold_price ? (
                         <ControlledSearchSelectField
                           control={saleControl}
                           name={`bundles.${index}.client`}
                           options={clients}
                           placeholder="Seleccionar comprador"
                         />
-                      )}
-                      {bundle.client_name && editMode[bundle.id] && (
-                        <ControlledSearchSelectField
-                          control={saleControl}
-                          name={`bundles.${index}.client`}
-                          options={clients}
-                          placeholder="Seleccionar comprador"
-                        />
+                      ) : (
+                        bundle.client_name
                       )}
                     </td>
                     <td className="px-4 py-2">
-                      {bundle.sold_price &&
-                        !editMode[bundle.id] &&
+                      {editMode[bundle.id] || !bundle.sold_price ? (
+                        <ControlledPriceField
+                          name={`bundles.${index}.price`}
+                          control={saleControl}
+                        />
+                      ) : (
                         `$${bundle.sold_price.toLocaleString("es-AR", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
-                        })}`}
-                      {!bundle.sold_price && !editMode[bundle.id] && (
-                        <ControlledPriceField
-                          name={`bundles.${index}.price`}
-                          control={saleControl}
-                        />
+                        })}`
                       )}
-                      {bundle.sold_price && editMode[bundle.id] && (
-                        <ControlledPriceField
-                          name={`bundles.${index}.price`}
+                    </td>
+                    <td className="px-4 py-2">
+                      {editMode[bundle.id] || !bundle.deadline ? (
+                        <ControlledSearchSelectField
                           control={saleControl}
+                          name={`bundles.${index}.deadline`}
+                          options={deadlines}
+                          placeholder="Seleccionar plazo"
                         />
+                      ) : (
+                        bundle.deadline
                       )}
                     </td>
                     <td
