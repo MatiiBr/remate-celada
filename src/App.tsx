@@ -16,7 +16,8 @@ import { Auctions } from "./pages/auctions/Auctions";
 import { AddAuction } from "./pages/auctions/AddAuction";
 import { EditAuction } from "./pages/auctions/EditAuction";
 import { AuctionBundles } from "./pages/auctions/AuctionBundles";
-import { Sales } from "./pages/sales/Sales";
+import { AddSale } from "./pages/sales/AddSale";
+import { EditSale } from "./pages/sales/EditSale";
 
 function App() {
   return (
@@ -28,7 +29,8 @@ function App() {
         <Route path="/add-auction" element={<AddAuction />} />
         <Route path="/edit-auction/:id" element={<EditAuction />} />
         <Route path="/auction-bundles/:id" element={<AuctionBundles />} />
-        <Route path="/sales/:auctionId" element={<Sales />} />
+        <Route path="/add-sale/:auctionId" element={<AddSale />} />
+        <Route path="/edit-sale/:auctionId/:id" element={<EditSale />} />
         <Route path="/sellers" element={<Sellers />} />
         <Route path="/add-seller" element={<AddSeller />} />
         <Route path="/edit-seller/:id" element={<EditSeller />} />

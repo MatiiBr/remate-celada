@@ -3,16 +3,15 @@ import { ContentLayout } from "../../components/ContentLayout";
 import { PersistingTopBar } from "../../components/PersisistingTopBar";
 import { useDatabase } from "../../helpers/hooks/useDatabase";
 import { useCallback, useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { Auction } from "./Auctions";
-import { PAGE_SIZE, SALE_STATUSES } from "../../helpers/Constants";
+import { PAGE_SIZE } from "../../helpers/Constants";
 import { TablePagination } from "../../components/TablePagination";
 import { ControlledTextField } from "../../components/ControlledTextField";
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { PencilIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ControlledSelectField } from "../../components/ControlledSelectField";
 import {
   ControlledSearchSelectField,
   Option,
@@ -23,14 +22,10 @@ import {
   AuctionStatus,
   auctionStatusBadgeClasses,
 } from "../../helpers/auctionConstants";
+import { ask } from "@tauri-apps/plugin-dialog";
 
 const filterSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres"),
-  status: z.string(),
-  seller: z.object({
-    value: z.string(),
-    label: z.string(),
-  }),
   client: z.object({
     value: z.string(),
     label: z.string(),
@@ -43,11 +38,10 @@ export const AuctionBundles = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [bundles, setBundles] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [auction, setAuction] = useState<Auction>();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sellerOptions, setSellerOptions] = useState<Option[]>();
   const [clientOptions, setClientOptions] = useState<Option[]>();
   const [totalSale, setTotalSale] = useState<number>();
 
@@ -56,32 +50,17 @@ export const AuctionBundles = () => {
     defaultValues: { name: "" },
   });
   const nameField = watch("name");
-  const statusField = watch("status");
-  const sellerField = watch("seller");
   const clientField = watch("client");
 
-  const _filters = (
-    name: string,
-    status: string,
-    seller: Option,
-    client: Option
-  ) => {
+  const _filters = (name: string, client: Option) => {
     let paramsQuerySQL = "";
     let params: any[] = [];
 
     if (name) {
-      paramsQuerySQL += " AND (b.name LIKE ? OR b.number LIKE ?)";
-      params.push(`%${name}%`, `%${name}%`);
-    }
-
-    if (status) {
-      paramsQuerySQL += " AND s.sold = ?";
-      params.push(status === "VENDIDO" ? 1 : 0);
-    }
-
-    if (seller) {
-      paramsQuerySQL += " AND b.seller_id = ?";
-      params.push(seller.value);
+      paramsQuerySQL += ` AND EXISTS (SELECT 1 FROM sales_details sd2 
+                          JOIN bundle b2 ON sd2.bundle_id = b2.id 
+                          WHERE sd2.sale_id = s.id AND b2.number LIKE ?)`;
+      params.push(`%${name}%`);
     }
 
     if (client) {
@@ -96,14 +75,6 @@ export const AuctionBundles = () => {
     if (!db || !id) return;
 
     try {
-      const sellersResult: any[] = await db.select(
-        `SELECT DISTINCT se.id, se.company AS seller_company
-         FROM bundle b
-         JOIN seller se ON b.seller_id = se.id
-         WHERE b.auction_id = ?;`,
-        [id]
-      );
-
       const clientsResult: any[] = await db.select(
         `SELECT DISTINCT c.id, c.company AS client_company
          FROM sales s
@@ -112,17 +83,11 @@ export const AuctionBundles = () => {
         [id]
       );
 
-      const sellersOptions = sellersResult.map((seller) => ({
-        value: seller.id,
-        label: seller.seller_company,
-      }));
-
       const clientsOptions = clientsResult.map((client) => ({
         value: client.id,
         label: client.client_company,
       }));
 
-      setSellerOptions(sellersOptions);
       setClientOptions(clientsOptions);
     } catch (error) {
       console.error(
@@ -131,56 +96,55 @@ export const AuctionBundles = () => {
       );
     }
   };
-  const fetchBundlesFromAuction = async (nameField: string) => {
+  const fetchSalesFromAuction = async (nameField: string) => {
     if (!db || !id) return;
 
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const { params, paramsQuerySQL } = _filters(
-        nameField,
-        statusField,
-        sellerField,
-        clientField
-      );
+      const { params, paramsQuerySQL } = _filters(nameField, clientField);
 
-      const bundlesResult: any[] = await db.select(
+      const salesResult: any[] = await db.select(
         `SELECT 
-            b.*, 
-            se.company AS seller_company, 
-            c.company AS client_company, 
-            s.sold_price, 
-            s.sold AS sale_sold,
-            s.deadline
-        FROM bundle b
-        JOIN seller se ON b.seller_id = se.id
-        LEFT JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-        LEFT JOIN client c ON s.client_id = c.id
-        WHERE b.auction_id = ? ${paramsQuerySQL}
-        LIMIT ? OFFSET ?;`,
+            s.id AS sale_id,
+            s.auction_id,
+            s.client_id,
+            c.company AS client_company,
+            s.total_price,
+            s.deadline,
+            GROUP_CONCAT(b.number, ', ') AS bundle_numbers
+          FROM sales s
+          LEFT JOIN client c ON s.client_id = c.id
+          LEFT JOIN sales_details sd ON s.id = sd.sale_id
+          LEFT JOIN bundle b ON sd.bundle_id = b.id
+          LEFT JOIN seller se ON b.seller_id = se.id
+          WHERE s.auction_id = ? ${paramsQuerySQL}
+          GROUP BY s.id
+          ORDER BY s.id DESC
+          LIMIT ? OFFSET ?;`,
         [id, ...params, PAGE_SIZE, offset]
       );
 
       const totalResult: any[] = await db.select(
-        `SELECT COUNT(*) AS count
-          FROM bundle b
-          LEFT JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-          LEFT JOIN client c ON s.client_id = c.id
-          JOIN seller se ON b.seller_id = se.id
-          WHERE b.auction_id = ? ${paramsQuerySQL};`,
+        `SELECT COUNT(DISTINCT s.id) AS count
+         FROM sales s
+         LEFT JOIN client c ON s.client_id = c.id
+         LEFT JOIN sales_details sd ON s.id = sd.sale_id
+         LEFT JOIN bundle b ON sd.bundle_id = b.id
+         LEFT JOIN seller se ON b.seller_id = se.id
+         WHERE s.auction_id = ? ${paramsQuerySQL};`,
         [id, ...params]
       );
 
       const totalSaleResult: any[] = await db.select(
-        `SELECT SUM(s.sold_price) AS total_sales
-         FROM bundle b
-         LEFT JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-         WHERE b.auction_id = ? ${paramsQuerySQL};`,
+        `SELECT SUM(s.total_price) AS total_sales
+         FROM sales s
+         WHERE s.auction_id = ? ${paramsQuerySQL};`,
         [id, ...params]
       );
 
       setTotalPages(Math.ceil(totalResult[0].count / PAGE_SIZE));
       setTotalSale(totalSaleResult[0].total_sales || 0);
-      setBundles(bundlesResult);
+      setSales(salesResult);
     } catch (error) {
       console.error("Error al cargar lotes del remate:", error);
       toast.error("Error al cargar lotes del remate");
@@ -191,8 +155,8 @@ export const AuctionBundles = () => {
 
   useEffect(() => {
     loadFilters();
-    fetchBundlesFromAuction(nameField);
-  }, [db, id, navigate, currentPage, statusField, sellerField, clientField]);
+    fetchSalesFromAuction(nameField);
+  }, [db, id, navigate, currentPage, clientField]);
 
   useEffect(() => {
     const fetchAuction = async () => {
@@ -213,7 +177,7 @@ export const AuctionBundles = () => {
 
   const debouncedSearch = useCallback(
     debounce((nameField) => {
-      fetchBundlesFromAuction(nameField);
+      fetchSalesFromAuction(nameField);
     }, 500),
     [db]
   );
@@ -230,9 +194,38 @@ export const AuctionBundles = () => {
     resetField("name");
   };
 
+  const handleEdit = (saleId: string, auctionId: string) => {
+    navigate(`/edit-sale/${auctionId}/${saleId}`);
+  };
+  const handleCancel = async (saleId: string) => {
+    if (!db) return;
+
+    const confirm = await ask("La venta va a ser cancelada.", {
+      title: "Cancelar venta",
+      kind: "warning",
+    });
+
+    if (confirm) {
+      try {
+        await db.execute(`DELETE FROM sales_details WHERE sale_id = ?`, [
+          saleId,
+        ]);
+
+        await db.execute(`DELETE FROM sales WHERE id = ?`, [saleId]);
+
+        toast.success("Venta eliminada correctamente");
+        fetchSalesFromAuction(nameField);
+      } catch (error) {
+        await db.execute("ROLLBACK");
+        toast.error("Error al eliminar la venta");
+        console.error("Error al eliminar venta:", error);
+      }
+    }
+  };
+
   return (
     <ContentLayout>
-      <PersistingTopBar to={"/auctions"} withoutSubmitButton>
+      <PersistingTopBar to={`/auction-bundles/${id}`} withoutSubmitButton>
         <p>
           Lotes del Remate:{" "}
           <span className="text-red-500 font-semibold">{auction?.name}</span> -{" "}
@@ -256,19 +249,6 @@ export const AuctionBundles = () => {
             onIconClick={handleIconClick}
             inputClassName="min-w-xs"
           />
-          <ControlledSelectField
-            control={control}
-            name="status"
-            options={SALE_STATUSES}
-            placeholder="Selecciona un estado"
-          />
-          <ControlledSearchSelectField
-            control={control}
-            name="seller"
-            options={sellerOptions!}
-            placeholder="Selecciona un vendedor"
-          />
-
           <ControlledSearchSelectField
             control={control}
             name="client"
@@ -279,7 +259,7 @@ export const AuctionBundles = () => {
           <div className="ml-auto flex gap-3">
             {auction?.status === AUCTION_STATUSES.EN_CURSO && (
               <Link
-                to={`/sales/${id}`}
+                to={`/add-sale/${id}`}
                 className="py-2 px-3  border border-red-700 text-white cursor-pointer bg-red-700 hover:bg-white hover:text-red-700 font-semibold rounded"
               >
                 Cargar ventas
@@ -296,8 +276,8 @@ export const AuctionBundles = () => {
       </div>
       <div className="p-6">
         {loading ? (
-          <p className="text-gray-500">Cargando lotes...</p>
-        ) : bundles.length > 0 ? (
+          <p className="text-gray-500">Cargando ventas...</p>
+        ) : sales.length > 0 ? (
           <>
             {Boolean(totalSale) && totalSale && (
               <h3 className="text-right mb-3">
@@ -313,73 +293,70 @@ export const AuctionBundles = () => {
             <table className="table-auto w-full">
               <thead>
                 <tr className="bg-red-900">
-                  <th className="text-white px-4 py-2 rounded-tl-md">Número</th>
-                  <th className="text-white px-4 py-2 text-left">Nombre</th>
-                  <th className="text-white px-4 py-2 text-left">
-                    Observaciones
+                  <th className="text-white px-4 py-2 text-left rounded-tl-md">
+                    Lote
                   </th>
-                  <th className="text-white px-4 py-2 text-left">Vendedor</th>
-                  <th className="text-white px-4 py-2 text-left">Estado</th>
                   <th className="text-white px-4 py-2 text-left">Comprador</th>
-                  <th className="text-white px-4 py-2 text-left">
-                    Plazo
-                  </th>
+                  <th className="text-white px-4 py-2 text-left">Plazo</th>
+                  <th className="text-white px-4 py-2 text-left">Precio</th>
                   <th className="text-white px-4 py-2 text-left rounded-tr-md">
-                    Precio
+                    Acciones
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {bundles.map((bundle, index) => (
+                {sales.map((sale, index) => (
                   <tr
-                    key={bundle.id}
-                    className={index % 2 === 0 ? "bg-red-100" : "bg-red-200"}
+                    key={sale.sale_id}
+                    className="odd:bg-red-100 even:bg-red-200"
                   >
-                    <td
-                      className={`text-black px-4 py-2 text-center ${
-                        (index + 1 === PAGE_SIZE ||
-                          index + 1 === bundles.length) &&
-                        "rounded-bl-md"
-                      }`}
-                    >
-                      {bundle.number}
-                    </td>
-                    <td className="text-black px-4 py-2">{bundle.name}</td>
-                    <td className="text-black px-4 py-2">
-                      {bundle.observations || "Sin observaciones"}
-                    </td>
-                    <td className="text-black px-4 py-2">
-                      {bundle.seller_company}
-                    </td>
-                    <td className="text-black px-4 py-2">
-                      {bundle.sale_sold ? (
-                        <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">
-                          VENDIDO
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-yellow-600/20 ring-inset">
-                          EN VENTA
-                        </span>
-                      )}
-                    </td>
-                    <td className={`text-black px-4 py-2`}>
-                      {bundle.client_company || "-"}
-                    </td>
-                    <td className={`text-black px-4 py-2`}>
-                      {bundle.deadline || "-"}
-                    </td>
                     <td
                       className={`text-black px-4 py-2 ${
                         (index + 1 === PAGE_SIZE ||
-                          index + 1 === bundles.length) &&
-                        "rounded-br-md"
+                          index + 1 === sales.length) &&
+                        "rounded-bl-md"
                       }`}
                     >
-                      {bundle.sold_price
-                        ? `$${bundle.sold_price.toLocaleString("es-AR", {
+                      {sale.bundle_numbers}
+                    </td>
+                    <td className={`text-black px-4 py-2`}>
+                      {sale.client_company || "-"}
+                    </td>
+                    <td className={`text-black px-4 py-2`}>
+                      {sale.deadline || "-"}
+                    </td>
+                    <td className={`text-black px-4 py-2`}>
+                      {sale.total_price
+                        ? `$${sale.total_price.toLocaleString("es-AR", {
                             minimumFractionDigits: 2,
                           })}`
                         : "-"}
+                    </td>
+                    <td
+                      className={`text-black px-4 py-2 flex gap-4 ${
+                        (index + 1 === PAGE_SIZE ||
+                          index + 1 === sales.length) &&
+                        "rounded-br-md"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleEdit(sale.sale_id, sale.auction_id)
+                        }
+                        className="cursor-pointer"
+                        title="Editar venta"
+                      >
+                        <PencilIcon className="size-6 text-red-700" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCancel(sale.sale_id)}
+                        className="cursor-pointer"
+                        title="Cancelar venta"
+                      >
+                        <TrashIcon className="size-6 text-red-700" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -398,6 +375,7 @@ export const AuctionBundles = () => {
           <p className="text-red-500">No hay lotes asignados a este remate.</p>
         )}
       </div>
+      <Toaster />
     </ContentLayout>
   );
 };

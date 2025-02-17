@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { Logo } from "./Logo";
 
 export const Nav = () => {
   const location = useLocation();
@@ -21,7 +20,9 @@ export const Nav = () => {
           "add-auction",
           "edit-auction",
           "auction-bundles",
-          "sales"
+          "sales",
+          "add-sale",
+          "edit-sale",
         ])}
       >
         Remates
@@ -47,7 +48,6 @@ export const Nav = () => {
       <Link to="/reports" className={getLinkClass(["reports"])}>
         Reportes
       </Link>
-      <Logo />
     </nav>
   );
 };

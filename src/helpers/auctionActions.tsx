@@ -1,4 +1,4 @@
-import { ask, message } from "@tauri-apps/plugin-dialog";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { AUCTION_STATUSES } from "./auctionConstants";
 
 const executeUpdate = async (
@@ -209,22 +209,18 @@ export const handleEnd = async (
   const totalBundles = totalBundlesResult[0]?.count || 0;
 
   const soldBundlesResult = await db.select(
-    `SELECT COUNT(DISTINCT bundle_id) as count FROM sales WHERE auction_id = ?`,
+    `SELECT COUNT(DISTINCT sd.bundle_id) as count 
+      FROM sales AS s
+      LEFT JOIN sales_details sd ON s.id = sd.sale_id
+      WHERE auction_id = ?`,
     [id]
   );
   const soldBundles = soldBundlesResult[0]?.count || 0;
 
-  if (soldBundles < totalBundles) {
-    message(
-      `No se puede finalizar la subasta. Hay ${
-        totalBundles - soldBundles
-      } lotes sin vender.`
-    );
-    return;
-  }
-
   const confirm = await ask(
-    "El remate va a ser finalizado. Esta acción no tiene vuelta atras!",
+    `El remate va a ser finalizado con ${
+      totalBundles - soldBundles
+    } lotes sin vender. Esta acción no tiene vuelta atras!`,
     { title: "Finalizar remate", kind: "info" }
   );
   if (confirm)

@@ -77,7 +77,7 @@ export const EditAuction = () => {
         "UPDATE auction SET name = ?, date = ?, province = ?, city = ? WHERE id = ?;",
         [data.name, data.date, data.province, data.city, id]
       );
-      navigate("/auctios");
+      navigate("/auctions");
       toast.success("Remate actualizado correctamente", {
         id: "success-edit",
       });

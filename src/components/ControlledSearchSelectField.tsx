@@ -4,7 +4,7 @@ import Select from "react-select";
 export type Option = {
   label: string;
   value: string;
-}
+};
 
 interface Props {
   control: any;
@@ -12,6 +12,7 @@ interface Props {
   options: Option[];
   label?: string;
   placeholder?: string;
+  isMulti?: boolean;
 }
 
 export const ControlledSearchSelectField = ({
@@ -20,6 +21,7 @@ export const ControlledSearchSelectField = ({
   label,
   options,
   placeholder,
+  isMulti = false,
 }: Props) => {
   return (
     <div>
@@ -33,6 +35,7 @@ export const ControlledSearchSelectField = ({
             options={options}
             placeholder={placeholder || "Selecciona una opcion"}
             isSearchable
+            isMulti={isMulti}
             className="w-full text-black"
             styles={{
               control: (base, state) => ({

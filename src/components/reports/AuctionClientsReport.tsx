@@ -42,7 +42,7 @@ export const AuctionClientsReport = ({ db }: Prop) => {
     const fetchFilters = async () => {
       try {
         const auctions: any[] = await db.select(
-          `SELECT id, name FROM auction WHERE deleted = 0 AND status = 'FINALIZADO'`
+          `SELECT id, name FROM auction WHERE deleted = 0`
         );
 
         setAuctionOptions(
@@ -62,7 +62,8 @@ export const AuctionClientsReport = ({ db }: Prop) => {
       const clients: any[] = await db.select(
         `SELECT DISTINCT cl.id, cl.company AS client_company
           FROM sales s
-          JOIN bundle b ON s.bundle_id = b.id AND s.auction_id = b.auction_id
+          JOIN sales_details sd ON s.id = sd.sale_id
+          JOIN bundle b ON sd.bundle_id = b.id
           JOIN client cl ON s.client_id = cl.id 
           WHERE b.auction_id = ?;`,
         [selectedAuction.value]

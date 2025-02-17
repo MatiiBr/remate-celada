@@ -2,7 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import { Option } from "../../components/ControlledSearchSelectField";
 import { AuctionTemplateData } from "./auctionSellerReport";
 import { savePdfFromHtml } from "../savePDF";
-import { auctionSalesTemplate } from "../templates/auctionSellerTemplate";
+import { auctionClientTemplate } from "../templates/auctionClientTemplate";
 
 export const auctionClientReport = async (
   db: Database | null,
@@ -13,18 +13,38 @@ export const auctionClientReport = async (
 
   try {
     const salesResult: any[] = await db.select(
-      `SELECT 
-            b.number,
-            b.name,
-            c.company,
-            s.sold_price,
-            a.date
-        FROM bundle b
-        JOIN sales s ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-        JOIN client c ON s.client_id = c.id
-        LEFT JOIN auction a ON b.auction_id = a.id
-        WHERE b.auction_id = ? AND s.client_id = ?
-        ORDER BY b.number ASC;
+      `WITH RankedDetails AS (
+          SELECT 
+              b.number,
+              b.name,
+              c.company AS company,
+              s.id AS sale_id,
+              s.total_price,
+              s.deadline,
+              a.date,
+              sd.sale_id AS sale_detail_id,
+              ROW_NUMBER() OVER (PARTITION BY sd.sale_id ORDER BY b.number ASC) AS row_num,
+              COUNT(*) OVER (PARTITION BY sd.sale_id) AS total_rows
+          FROM bundle b
+          LEFT JOIN sales_details sd ON b.id = sd.bundle_id
+          LEFT JOIN sales s ON s.id = sd.sale_id AND s.auction_id = b.auction_id
+          LEFT JOIN client c ON s.client_id = c.id
+          LEFT JOIN auction a ON b.auction_id = a.id
+          WHERE b.auction_id = ? AND s.client_id = ?
+      )
+      SELECT 
+          number,
+          name,
+          company,
+          CASE 
+              WHEN row_num = total_rows THEN total_price
+              ELSE NULL
+          END AS total_price,
+          deadline,
+          date,
+          sale_id
+      FROM RankedDetails
+      ORDER BY sale_id, number ASC;
       `,
       [selectedAuction.value, selectedClient.value]
     );
@@ -40,7 +60,6 @@ export const auctionClientReport = async (
       (res) => {
         return {
           quantity: 1,
-          deadline: "12 CTAS",
           ...res,
         };
       }
@@ -55,7 +74,7 @@ export const auctionClientReport = async (
     )}${String(now.getMinutes()).padStart(2, "0")}`;
 
     await savePdfFromHtml(
-      auctionSalesTemplate(formattedSalesResult, "client"),
+      auctionClientTemplate(formattedSalesResult),
       `CCR_${selectedAuction.value}_${formattedDate}`
     );
   } catch (error) {

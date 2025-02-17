@@ -42,7 +42,6 @@ export const AuctionSellersReport = ({ db }: Prop) => {
     const fetchFilters = async () => {
       try {
         const auctions: any[] = await db.select(
-          // `SELECT id, name FROM auction WHERE deleted = 0 AND status = 'FINALIZADO'`
           `SELECT id, name FROM auction WHERE deleted = 0`
         );
 
@@ -62,10 +61,11 @@ export const AuctionSellersReport = ({ db }: Prop) => {
     const fetchSellers = async () => {
       const sellers: any[] = await db.select(
         `SELECT DISTINCT se.id, se.company AS seller_company
-           FROM sales s
-           JOIN bundle b ON s.bundle_id = b.id AND s.auction_id = b.auction_id
-           JOIN seller se ON b.seller_id = se.id
-           WHERE b.auction_id = ?;`,
+          FROM sales s
+          JOIN sales_details sd ON s.id = sd.sale_id
+          JOIN bundle b ON sd.bundle_id = b.id
+          JOIN seller se ON b.seller_id = se.id
+          WHERE s.auction_id = ?;`,
         [selectedAuction.value]
       );
       console.log("SELLERS", sellers);

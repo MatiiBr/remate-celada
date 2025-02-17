@@ -66,18 +66,25 @@ pub fn run() {
 
                 CREATE TABLE IF NOT EXISTS sales (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bundle_id INTEGER NOT NULL,
                     auction_id INTEGER NOT NULL,
-                    client_id INTEGER,
-                    sold_price REAL,
-                    sold INTEGER DEFAULT(0),
+                    client_id INTEGER NOT NULL,
+                    total_price REAL NOT NULL DEFAULT 0,
                     deadline TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (bundle_id) REFERENCES bundle(id) ON DELETE CASCADE ON UPDATE CASCADE,
                     FOREIGN KEY (auction_id) REFERENCES auction(id) ON DELETE CASCADE ON UPDATE CASCADE,
-                    FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE SET NULL ON UPDATE CASCADE
-                    UNIQUE (bundle_id, auction_id)
+                    FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE CASCADE ON UPDATE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS sales_details (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sale_id INTEGER NOT NULL,
+                    bundle_id INTEGER NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    FOREIGN KEY (bundle_id) REFERENCES bundle(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    UNIQUE (sale_id, bundle_id)
                 );
 
                 CREATE TRIGGER IF NOT EXISTS update_client_timestamp
@@ -114,6 +121,13 @@ pub fn run() {
                 FOR EACH ROW
                     BEGIN
                         UPDATE sales SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                    END;
+                
+                CREATE TRIGGER IF NOT EXISTS update_sales_details_timestamp
+                AFTER UPDATE ON sales_details
+                FOR EACH ROW
+                    BEGIN
+                        UPDATE sales_details SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
                     END;
             ",
             kind: MigrationKind::Up,

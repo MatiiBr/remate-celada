@@ -19,7 +19,7 @@ import { TableTopBar } from "../../components/TableTopBar";
 import { ContentLayout } from "../../components/ContentLayout";
 import { TablePagination } from "../../components/TablePagination";
 
-type Seller = {
+export type Seller = {
   id: number;
   company: string;
   first_name: string;

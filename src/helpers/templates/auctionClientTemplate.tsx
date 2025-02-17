@@ -2,7 +2,7 @@ import { formatNumber } from "../formatNumber";
 import { naturalDate } from "../naturalDate";
 import { AuctionTemplateData } from "../reports/auctionSellerReport";
 
-export const auctionSellerTemplate = (
+export const auctionClientTemplate = (
   auctionTemplateData: AuctionTemplateData[],
 ) => {
   const formattedAuctionTemplateData: (AuctionTemplateData & {
@@ -24,8 +24,8 @@ export const auctionSellerTemplate = (
   );
 
   const comission = subtotalSold * 0.1;
-  const totalSold = subtotalSold - comission;
-  const documentType = "REMITO RESUPUESTO VENTA";
+  const totalSold =subtotalSold + comission;
+  const documentType = "REMITO PRESUPUESTO";
 
   return `
   <!DOCTYPE html>
@@ -49,7 +49,7 @@ export const auctionSellerTemplate = (
           .grid-table__cell.cell-left { text-align: left; }
           .grid-table__cell.cell-center { text-align: center; }
           .grid-table__cell.cell-right { text-align: right; }
-          .grid-table__cell.cell-empty { grid-column: span 11; height: 9px; }
+          .grid-table__cell.cell-empty { grid-column: span 10; height: 9px; }
           .grid-table { display: grid; grid-template-columns: auto auto 1fr auto auto auto auto auto auto; width: 100%; margin-top: 40px; }
           .grid-table__header, .grid-table__cell { padding: 3px 6px; border-bottom: 1px solid black; text-align: center; }
           .grid-table__cell.cell-summary { border-width: 3px; }
@@ -99,9 +99,8 @@ export const auctionSellerTemplate = (
       <div class="grid-table">
         <div class="grid-table__header">VENTA</div>
         <div class="grid-table__header">LOTE</div>
-        <div class="grid-table__header">VENDEDOR</div>
+        <div class="grid-table__header">COMPRADOR</div>
         <div class="grid-table__header">PRODUCTO</div>
-        <div class="grid-table__header">ESTADO</div>
         <div class="grid-table__header">CANT</div>
         <div class="grid-table__header"></div>
         <div class="grid-table__header">PRECIO</div>
@@ -112,23 +111,16 @@ export const auctionSellerTemplate = (
           ${formattedAuctionTemplateData
             .map(
               (item) => `
-                <div class="grid-table__cell cell-center">${
-                  item.sale_id ? item.sale_id : "-"
-                }</div>
+                <div class="grid-table__cell cell-center">${item.sale_id ? item.sale_id : "-"}</div>
                 <div class="grid-table__cell cell-center">${item.number}</div>
                 <div class="grid-table__cell cell-left">${item.company}</div>
                 <div class="grid-table__cell cell-left">${item.name}</div>
-                <div class="grid-table__cell cell-left">${
-                  item.sale_id ? "VENDIDO" : "<b>NO VENDIDO</b>"
-                }</div>
                 <div class="grid-table__cell cell-center">${
                   item.sale_id ? item.quantity : 0
                 }</div>
                 <div class="grid-table__cell cell-center">$</div>
                 <div class="grid-table__cell cell-right">${item.subtotal}</div>
-                <div class="grid-table__cell cell-center">${
-                  item.sale_id ? item.deadline : "-"
-                }</div>
+                <div class="grid-table__cell cell-center">${item.sale_id ? item.deadline : '-'}</div>
                 <div class="grid-table__cell cell-center">$</div>
                 <div class="grid-table__cell cell-right">${item.total}</div>
           `
@@ -141,7 +133,6 @@ export const auctionSellerTemplate = (
         <div class="grid-table__cell cell-empty"></div>
 
         
-        <div></div>
         <div></div>
         <div></div>
         <div></div>
@@ -160,7 +151,6 @@ export const auctionSellerTemplate = (
         <div></div>
         <div></div>
         <div></div>
-        <div></div>
         <div class="grid-table__cell"></div>
         <div class="grid-table__cell"></div>
         <div class="grid-table__cell cell-left">10% COMISIÓN</div>
@@ -174,14 +164,12 @@ export const auctionSellerTemplate = (
         <div></div>
         <div></div>
         <div></div>
-        <div></div>
         <div class="grid-table__cell cell-summary"></div>
         <div class="grid-table__cell cell-summary"></div>
         <div class="grid-table__cell cell-summary cell-left">IVA</div>
         <div class="grid-table__cell cell-summary cell-center">$</div>
         <div class="grid-table__cell cell-summary cell-right">-</div>
 
-        <div></div>
         <div></div>
         <div></div>
         <div></div>

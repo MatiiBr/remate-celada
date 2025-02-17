@@ -97,7 +97,6 @@ export const Bundles = () => {
         [...params, PAGE_SIZE, offset]
       );
 
-      console.log("RESULTS BUNDLE", result);
       setBundles(result);
     } catch (error) {
       console.error("Error al obtener lotes:", error);
