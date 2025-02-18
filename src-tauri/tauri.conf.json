@@ -34,7 +34,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:devdatabase.db"]
+      "preload": ["sqlite:remateagricola.db"]
     }
   }
 }

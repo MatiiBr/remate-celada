@@ -9,7 +9,7 @@ export const useDatabase = () => {
   useEffect(() => {
     async function initDb() {
       try {
-        const database = await Database.load("sqlite:devdatabase.db");
+        const database = await Database.load("sqlite:remateagricola.db");
         setDb(database);
       } catch (err) {
         setError("Error al conectar con la base de datos.");

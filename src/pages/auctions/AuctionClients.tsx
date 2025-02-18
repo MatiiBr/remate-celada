@@ -12,7 +12,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { Auction } from "./Auctions";
 import { PAGE_SIZE } from "../../helpers/Constants";
 import { TablePagination } from "../../components/TablePagination";
-import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
+import { BackspaceIcon, CurrencyDollarIcon } from "@heroicons/react/24/solid";
 
 export const AuctionClients = () => {
   const { db } = useDatabase();
@@ -92,11 +92,13 @@ export const AuctionClients = () => {
         CROSS JOIN TotalPurchases tp;`,
         [id, id]
       );
-      
-      const totalSoldCommission = totalEarnedResult[0]?.total_sold_commission ?? 0;
-      const totalSpentCommission = totalEarnedResult[0]?.total_spent_commission ?? 0;
+
+      const totalSoldCommission =
+        totalEarnedResult[0]?.total_sold_commission ?? 0;
+      const totalSpentCommission =
+        totalEarnedResult[0]?.total_spent_commission ?? 0;
       const totalEarnedValue = totalSoldCommission + totalSpentCommission;
-      
+
       setTotalEarned(totalEarnedValue);
 
       const clientsWithBalance = clientsResult.map((client) => {
@@ -108,7 +110,6 @@ export const AuctionClients = () => {
         const isToPay = spentWithComission - soldWithComission <= 0;
         const comission = soldComission + spentComission;
         const isPaid = client.total_paid > 0;
-
 
         return {
           ...client,
@@ -174,6 +175,30 @@ export const AuctionClients = () => {
 
       toast.success("Transacción registrada correctamente");
       fetchClientsFromAuction();
+    } catch (error) {
+      console.error("Error al registrar transacción:", error);
+      toast.error("Error al registrar transacción");
+    }
+  };
+
+  const handleDeleteTransaction = async (clientId: number) => {
+    if (!db || !id) return;
+    try {
+      const transaction = await db.execute(
+        `SELECT * FROM transactions WHERE auction_id = ? AND client_id = ?`,
+        [id, clientId]
+      );
+
+      if (transaction) {
+        await db.execute(
+          `DELETE FROM transactions WHERE auction_id = ? AND client_id = ?`,
+          [id, clientId]
+        );
+        toast.success("Transacción eliminada correctamente");
+        fetchClientsFromAuction();
+      } else {
+        toast.success("No hay transaccion para eliminar");
+      }
     } catch (error) {
       console.error("Error al registrar transacción:", error);
       toast.error("Error al registrar transacción");
@@ -324,25 +349,34 @@ export const AuctionClients = () => {
                       }`}
                     >
                       {client.subtotal > 0 &&
-                        !client.isPaid &&
-                        auction?.status === AUCTION_STATUSES.FINALIZADO && (
-                          <div className="flex gap-4">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleRegisterTransaction(
-                                  client.client_id,
-                                  client.subtotal,
-                                  client.isToPay ? "PAGO" : "COBRO"
-                                )
-                              }
-                              className="cursor-pointer"
-                              title="Pagar"
-                            >
-                              <CurrencyDollarIcon className="size-6 text-red-700" />
-                            </button>
-                          </div>
-                        )}
+                        auction?.status === AUCTION_STATUSES.FINALIZADO &&
+                        (client.isPaid ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeleteTransaction(client.client_id)
+                            }
+                            className="cursor-pointer"
+                            title="Cancelar"
+                          >
+                            <BackspaceIcon className="size-6 text-red-700" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRegisterTransaction(
+                                client.client_id,
+                                client.subtotal,
+                                client.isToPay ? "PAGO" : "COBRO"
+                              )
+                            }
+                            className="cursor-pointer"
+                            title="Pagar"
+                          >
+                            <CurrencyDollarIcon className="size-6 text-red-700" />
+                          </button>
+                        ))}
                     </td>
                   </tr>
                 ))}

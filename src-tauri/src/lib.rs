@@ -145,7 +145,7 @@ pub fn run() {
         .plugin(
             tauri_plugin_sql::Builder
                 ::default()
-                .add_migrations("sqlite:devdatabase.db", migrations)
+                .add_migrations("sqlite:remateagricola.db", migrations)
                 .build()
         )
         .plugin(tauri_plugin_opener::init())
