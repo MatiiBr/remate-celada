@@ -20,7 +20,7 @@ import { Toaster } from "react-hot-toast";
 import { TableTopBar } from "../../components/TableTopBar";
 import { ContentLayout } from "../../components/ContentLayout";
 
-type Client = {
+export type Client = {
   id: number;
   company: string;
   first_name: string;
@@ -89,7 +89,7 @@ export const Clients = () => {
 
       setClients(result);
     } catch (error) {
-      console.error("Error al obtener compradores:", error);
+      console.error("Error al obtener clientes:", error);
     }
   };
 
@@ -118,8 +118,8 @@ export const Clients = () => {
   };
 
   const handleDelete = async (clientId: number) => {
-    const hasToDelete = await ask("El comprador va a ser eliminado.", {
-      title: "Borrar comprador",
+    const hasToDelete = await ask("El cliente va a ser eliminado.", {
+      title: "Borrar cliente",
       kind: "warning",
     });
 
@@ -134,7 +134,7 @@ export const Clients = () => {
   return (
     <ContentLayout>
       <TableTopBar
-        name={"Compradores"}
+        name={"Clientes"}
         buttonLink={"/add-client"}
         buttonLabel={"Nuevo"}
       />
@@ -270,7 +270,7 @@ export const Clients = () => {
           </>
         ) : (
           <p className="text-red-500 font-bold">
-            No hay compradores registrados.
+            No hay clientes registrados.
           </p>
         )}
       </div>

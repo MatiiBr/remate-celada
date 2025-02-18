@@ -87,10 +87,10 @@ export const Bundles = () => {
       const result: any[] = await db.select(
         `SELECT 
           bundle.*, 
-          seller.company AS seller_company,
+          client.company AS seller_company,
           auction.name AS auction_name
         FROM bundle
-        JOIN seller ON bundle.seller_id = seller.id
+        JOIN client ON bundle.seller_id = client.id
         JOIN auction ON bundle.auction_id = auction.id
         WHERE bundle.deleted = 0${paramsQuerySQL}
         LIMIT ? OFFSET ?`,

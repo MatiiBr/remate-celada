@@ -18,12 +18,6 @@ const formSchema = z.object({
     value: z.number(),
     label: z.string(),
   }),
-  bundles: z.array(
-    z.object({
-      value: z.number(),
-      label: z.number(),
-    })
-  ),
   deadline: z.object({
     value: z.string(),
     label: z.string(),
@@ -46,7 +40,6 @@ export const EditSale = () => {
   const { auctionId, id } = useParams();
   const navigate = useNavigate();
   const [clients, setClients] = useState<Option[]>([]);
-  const [bundles, setBundles] = useState<Option[]>([]);
 
   const {
     control,
@@ -66,16 +59,6 @@ export const EditSale = () => {
         `SELECT id, company FROM client`
       );
       setClients(clientsResult.map((c) => ({ value: c.id, label: c.company })));
-      const bundlesResult: any[] = await db.select(
-        `SELECT b.id, b.number
-         FROM bundle b
-         LEFT JOIN sales_details sd ON b.id = sd.bundle_id
-         LEFT JOIN sales s ON sd.sale_id = s.id AND s.auction_id = ?
-         WHERE s.id IS NULL AND b.auction_id = ?
-         ORDER BY b.number ASC`,
-        [auctionId, auctionId]
-      );
-      setBundles(bundlesResult.map((c) => ({ value: c.id, label: c.number })));
     } catch (error) {
       console.error("Error al cargar filtros de vendedores:", error);
     }
@@ -87,16 +70,13 @@ export const EditSale = () => {
       try {
         const result: any[] = await db.select(
           `SELECT 
-                s.client_id, 
+                s.buyer_id AS client_id, 
                 c.company AS client_name, 
                 s.total_price, 
-                s.deadline,
-                GROUP_CONCAT(b.id) AS bundle_ids,
-                GROUP_CONCAT(b.number) AS bundle_numbers
+                s.deadline
              FROM sales s
-             LEFT JOIN client c ON s.client_id = c.id
+             LEFT JOIN client c ON s.buyer_id = c.id
              LEFT JOIN sales_details sd ON s.id = sd.sale_id
-             LEFT JOIN bundle b ON sd.bundle_id = b.id
              WHERE s.id = ?
              GROUP BY s.id`,
           [id]
@@ -107,27 +87,18 @@ export const EditSale = () => {
           return;
         }
         const sale = result[0];
-
-        const formattedBundles = sale.bundle_ids
-          ? sale.bundle_ids
-              .split(",")
-              .map((bundleId: string, index: number) => ({
-                value: parseInt(bundleId),
-                label: parseInt(sale.bundle_numbers.split(",")[index]),
-              }))
-          : [];
+        
 
         reset({
           client: sale.client_id
             ? { value: sale.client_id, label: sale.client_name }
             : undefined,
-          bundles: formattedBundles,
           deadline:
             deadlines.find((d) => d.value === sale.deadline) || undefined,
           price: sale.total_price || "",
         });
       } catch (error) {
-        toast.error("Error al cargar Reamte");
+        toast.error("Error al cargar remate");
       } 
     };
     fetchSale();
@@ -143,43 +114,10 @@ export const EditSale = () => {
     try {
       await db.execute(
         `UPDATE sales 
-         SET client_id = ?, total_price = ?, deadline = ?, updated_at = CURRENT_TIMESTAMP 
+         SET buyer_id = ?, total_price = ?, deadline = ?, updated_at = CURRENT_TIMESTAMP 
          WHERE id = ?`,
         [data.client.value, data.price, data.deadline.value, id]
       );
-
-      const existingBundlesResult: any[] = await db.select(
-        `SELECT bundle_id FROM sales_details WHERE sale_id = ?`,
-        [id]
-      );
-      const existingBundles = existingBundlesResult.map((row) => row.bundle_id);
-
-      const newBundles = data.bundles.map((bundle) => bundle.value);
-
-      const bundlesToAdd = newBundles.filter(
-        (bundle) => !existingBundles.includes(bundle)
-      );
-      const bundlesToRemove = existingBundles.filter(
-        (bundle) => !newBundles.includes(bundle)
-      );
-
-      if (bundlesToAdd.length > 0) {
-        const values = bundlesToAdd.map(() => "(?, ?)").join(", ");
-        const params = bundlesToAdd.flatMap((bundle) => [id, bundle]);
-
-        await db.execute(
-          `INSERT INTO sales_details (sale_id, bundle_id) VALUES ${values}`,
-          params
-        );
-      }
-
-      if (bundlesToRemove.length > 0) {
-        const placeholders = bundlesToRemove.map(() => "?").join(", ");
-        await db.execute(
-          `DELETE FROM sales_details WHERE sale_id = ? AND bundle_id IN (${placeholders})`,
-          [id, ...bundlesToRemove]
-        );
-      }
 
       toast.success("Venta actualizada correctamente");
       navigate(`/auction-bundles/${auctionId}`);
@@ -196,13 +134,6 @@ export const EditSale = () => {
           isSubmitting={isSubmitting}
         />
         <div className="max-w-3xl mx-auto grid grid-cols-1 gap-4 mt-4">
-          <ControlledSearchSelectField
-            control={control}
-            name="bundles"
-            options={bundles!}
-            placeholder="Seleccionar lote/s"
-            isMulti
-          />
           <ControlledSearchSelectField
             control={control}
             name="client"

@@ -15,9 +15,9 @@ export const auctionBundlesReport = async (
       `SELECT 
             b.number AS Lote,
             b.name AS Producto,
-            se.company AS Vendedor
+            cl.company AS Vendedor
         FROM bundle b
-        JOIN seller se ON b.seller_id = se.id
+        JOIN client cl ON b.seller_id = cl.id
         WHERE b.auction_id = ?
         ORDER BY b.number ASC;
       `,

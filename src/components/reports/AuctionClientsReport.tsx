@@ -64,11 +64,11 @@ export const AuctionClientsReport = ({ db }: Prop) => {
           FROM sales s
           JOIN sales_details sd ON s.id = sd.sale_id
           JOIN bundle b ON sd.bundle_id = b.id
-          JOIN client cl ON s.client_id = cl.id 
+          JOIN client cl ON s.buyer_id = cl.id 
           WHERE b.auction_id = ?;`,
         [selectedAuction.value]
       );
-      console.log("SELLERS", clients);
+
       setClientOptions(
         clients.map((c) => ({ value: c.id, label: c.client_company }))
       );

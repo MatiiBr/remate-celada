@@ -20,24 +20,19 @@ export const Nav = () => {
           "add-auction",
           "edit-auction",
           "auction-bundles",
+          "auction-clients",
           "sales",
           "add-sale",
-          "edit-sale",
+          "edit-sale"
         ])}
       >
         Remates
       </Link>
       <Link
-        to="/sellers"
-        className={getLinkClass(["sellers", "add-seller", "edit-seller"])}
-      >
-        Vendedores
-      </Link>
-      <Link
         to="/clients"
         className={getLinkClass(["clients", "add-client", "edit-client"])}
       >
-        Compradores
+        Clientes
       </Link>
       <Link
         to="/bundles"

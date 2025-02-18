@@ -28,9 +28,9 @@ export const auctionClientReport = async (
           FROM bundle b
           LEFT JOIN sales_details sd ON b.id = sd.bundle_id
           LEFT JOIN sales s ON s.id = sd.sale_id AND s.auction_id = b.auction_id
-          LEFT JOIN client c ON s.client_id = c.id
+          LEFT JOIN client c ON s.buyer_id = c.id
           LEFT JOIN auction a ON b.auction_id = a.id
-          WHERE b.auction_id = ? AND s.client_id = ?
+          WHERE b.auction_id = ? AND s.buyer_id = ?
       )
       SELECT 
           number,

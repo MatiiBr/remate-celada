@@ -64,7 +64,7 @@ export const AuctionBundles = () => {
     }
 
     if (client) {
-      paramsQuerySQL += " AND s.client_id = ?";
+      paramsQuerySQL += " AND s.buyer_id = ?";
       params.push(client.value);
     }
 
@@ -78,7 +78,7 @@ export const AuctionBundles = () => {
       const clientsResult: any[] = await db.select(
         `SELECT DISTINCT c.id, c.company AS client_company
          FROM sales s
-         JOIN client c ON s.client_id = c.id
+         JOIN client c ON s.buyer_id = c.id
          WHERE s.auction_id = ?;`,
         [id]
       );
@@ -107,16 +107,17 @@ export const AuctionBundles = () => {
         `SELECT 
             s.id AS sale_id,
             s.auction_id,
-            s.client_id,
+            s.buyer_id,
             c.company AS client_company,
             s.total_price,
             s.deadline,
-            GROUP_CONCAT(b.number, ', ') AS bundle_numbers
+            GROUP_CONCAT(b.number, ', ') AS bundle_numbers,
+            GROUP_CONCAT(CONCAT('<b>',b.number, '</b> - ', b.name, ' - <b class="text-red-700">', seller.company), '</b> <br/>') AS bundle_names
           FROM sales s
-          LEFT JOIN client c ON s.client_id = c.id
+          LEFT JOIN client c ON s.buyer_id = c.id
           LEFT JOIN sales_details sd ON s.id = sd.sale_id
           LEFT JOIN bundle b ON sd.bundle_id = b.id
-          LEFT JOIN seller se ON b.seller_id = se.id
+          LEFT JOIN client seller ON b.seller_id = seller.id
           WHERE s.auction_id = ? ${paramsQuerySQL}
           GROUP BY s.id
           ORDER BY s.id DESC
@@ -127,10 +128,9 @@ export const AuctionBundles = () => {
       const totalResult: any[] = await db.select(
         `SELECT COUNT(DISTINCT s.id) AS count
          FROM sales s
-         LEFT JOIN client c ON s.client_id = c.id
+         LEFT JOIN client c ON s.buyer_id = c.id
          LEFT JOIN sales_details sd ON s.id = sd.sale_id
          LEFT JOIN bundle b ON sd.bundle_id = b.id
-         LEFT JOIN seller se ON b.seller_id = se.id
          WHERE s.auction_id = ? ${paramsQuerySQL};`,
         [id, ...params]
       );
@@ -225,7 +225,7 @@ export const AuctionBundles = () => {
 
   return (
     <ContentLayout>
-      <PersistingTopBar to={`/auction-bundles/${id}`} withoutSubmitButton>
+      <PersistingTopBar to={`/auctions`} withoutSubmitButton>
         <p>
           Lotes del Remate:{" "}
           <span className="text-red-500 font-semibold">{auction?.name}</span> -{" "}
@@ -317,7 +317,14 @@ export const AuctionBundles = () => {
                         "rounded-bl-md"
                       }`}
                     >
-                      {sale.bundle_numbers}
+                      <details className="cursor-pointer ">
+                        <summary>{sale.bundle_numbers}</summary>
+                        <p
+                          dangerouslySetInnerHTML={{
+                            __html: sale.bundle_names,
+                          }}
+                        ></p>
+                      </details>
                     </td>
                     <td className={`text-black px-4 py-2`}>
                       {sale.client_company || "-"}
@@ -333,30 +340,32 @@ export const AuctionBundles = () => {
                         : "-"}
                     </td>
                     <td
-                      className={`text-black px-4 py-2 flex gap-4 ${
+                      className={`text-black px-4 py-2  ${
                         (index + 1 === PAGE_SIZE ||
                           index + 1 === sales.length) &&
                         "rounded-br-md"
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleEdit(sale.sale_id, sale.auction_id)
-                        }
-                        className="cursor-pointer"
-                        title="Editar venta"
-                      >
-                        <PencilIcon className="size-6 text-red-700" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(sale.sale_id)}
-                        className="cursor-pointer"
-                        title="Cancelar venta"
-                      >
-                        <TrashIcon className="size-6 text-red-700" />
-                      </button>
+                      <div className="flex gap-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleEdit(sale.sale_id, sale.auction_id)
+                          }
+                          className="cursor-pointer"
+                          title="Editar venta"
+                        >
+                          <PencilIcon className="size-6 text-red-700" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(sale.sale_id)}
+                          className="cursor-pointer"
+                          title="Cancelar venta"
+                        >
+                          <TrashIcon className="size-6 text-red-700" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -372,7 +381,7 @@ export const AuctionBundles = () => {
             />
           </>
         ) : (
-          <p className="text-red-500">No hay lotes asignados a este remate.</p>
+          <p className="text-red-500">No hay ventas registradas en este remate.</p>
         )}
       </div>
       <Toaster />

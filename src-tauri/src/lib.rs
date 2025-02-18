@@ -1,29 +1,15 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use tauri_plugin_sql::{Migration, MigrationKind};
+use tauri_plugin_sql::{ Migration, MigrationKind };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![
-        // Define your migrations here
+    let migrations =
+        vec![
         Migration {
             version: 1,
             description: "create_initial_tables",
             sql: "
                 CREATE TABLE IF NOT EXISTS client (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company TEXT UNIQUE NOT NULL,
-                    first_name TEXT,
-                    last_name TEXT,
-                    email TEXT,
-                    phone TEXT,
-                    province TEXT NOT NULL,
-                    city TEXT NOT NULL,
-                    deleted INTEGER DEFAULT(0),
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-                );
-
-                CREATE TABLE IF NOT EXISTS seller (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     company TEXT UNIQUE NOT NULL,
                     first_name TEXT,
@@ -47,7 +33,7 @@ pub fn run() {
                     deleted INTEGER DEFAULT(0),
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (seller_id) REFERENCES seller(id) ON DELETE CASCADE ON UPDATE CASCADE
+                    FOREIGN KEY (seller_id) REFERENCES client(id) ON DELETE CASCADE ON UPDATE CASCADE
                     FOREIGN KEY (auction_id) REFERENCES auction(id) ON DELETE CASCADE ON UPDATE CASCADE
                     UNIQUE (number, auction_id)
                 );
@@ -67,13 +53,13 @@ pub fn run() {
                 CREATE TABLE IF NOT EXISTS sales (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     auction_id INTEGER NOT NULL,
-                    client_id INTEGER NOT NULL,
+                    buyer_id INTEGER NOT NULL,
                     total_price REAL NOT NULL DEFAULT 0,
                     deadline TEXT NOT NULL,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (auction_id) REFERENCES auction(id) ON DELETE CASCADE ON UPDATE CASCADE,
-                    FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE CASCADE ON UPDATE CASCADE
+                    FOREIGN KEY (buyer_id) REFERENCES client(id) ON DELETE CASCADE ON UPDATE CASCADE
                 );
 
                 CREATE TABLE IF NOT EXISTS sales_details (
@@ -92,13 +78,6 @@ pub fn run() {
                 FOR EACH ROW
                     BEGIN
                         UPDATE client SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
-                    END;
-
-                CREATE TRIGGER IF NOT EXISTS update_seller_timestamp
-                AFTER UPDATE ON seller
-                FOR EACH ROW
-                    BEGIN
-                        UPDATE seller SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
                     END;
 
                 CREATE TRIGGER IF NOT EXISTS update_bundle_timestamp
@@ -131,16 +110,43 @@ pub fn run() {
                     END;
             ",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add_transactions_table",
+            sql: "
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    auction_id INTEGER NOT NULL,
+                    client_id INTEGER NOT NULL,
+                    amount REAL NOT NULL CHECK(amount >= 0),
+                    type TEXT CHECK(type IN ('PAGO', 'COBRO')) NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (auction_id) REFERENCES auction(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                    FOREIGN KEY (client_id) REFERENCES client(id) ON DELETE CASCADE ON UPDATE CASCADE
+                );
+                
+                CREATE TRIGGER IF NOT EXISTS update_transactions_timestamp
+                AFTER UPDATE ON transactions
+                FOR EACH ROW
+                    BEGIN
+                        UPDATE transactions SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+                    END;
+            ",
+            kind: MigrationKind::Up
         }
     ];
 
-    tauri::Builder::default()
+    tauri::Builder
+        ::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:mydatabase.db", migrations)
-                .build(),
+            tauri_plugin_sql::Builder
+                ::default()
+                .add_migrations("sqlite:devdatabase.db", migrations)
+                .build()
         )
         .plugin(tauri_plugin_opener::init())
         .run(tauri::generate_context!())

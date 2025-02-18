@@ -60,15 +60,15 @@ export const AuctionSellersReport = ({ db }: Prop) => {
     if (!db || !selectedAuction) return;
     const fetchSellers = async () => {
       const sellers: any[] = await db.select(
-        `SELECT DISTINCT se.id, se.company AS seller_company
+        `SELECT DISTINCT cl.id, cl.company AS seller_company
           FROM sales s
           JOIN sales_details sd ON s.id = sd.sale_id
           JOIN bundle b ON sd.bundle_id = b.id
-          JOIN seller se ON b.seller_id = se.id
+          JOIN client cl ON b.seller_id = cl.id
           WHERE s.auction_id = ?;`,
         [selectedAuction.value]
       );
-      console.log("SELLERS", sellers);
+
       setSellerOptions(
         sellers.map((s) => ({ value: s.id, label: s.seller_company }))
       );

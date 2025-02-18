@@ -3,10 +3,7 @@ import { Nav } from "./components/Nav";
 import { Route, Routes } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { Reports } from "./pages/Reports";
-import { Sellers } from "./pages/sellers/Sellers";
 import { Clients } from "./pages/clients/Clients";
-import { AddSeller } from "./pages/sellers/AddSeller";
-import { EditSeller } from "./pages/sellers/EditSeller";
 import { AddClient } from "./pages/clients/AddClient";
 import { EditClient } from "./pages/clients/EditClient";
 import { Bundles } from "./pages/bundles/Bundles";
@@ -18,6 +15,7 @@ import { EditAuction } from "./pages/auctions/EditAuction";
 import { AuctionBundles } from "./pages/auctions/AuctionBundles";
 import { AddSale } from "./pages/sales/AddSale";
 import { EditSale } from "./pages/sales/EditSale";
+import { AuctionClients } from "./pages/auctions/AuctionClients";
 
 function App() {
   return (
@@ -29,11 +27,9 @@ function App() {
         <Route path="/add-auction" element={<AddAuction />} />
         <Route path="/edit-auction/:id" element={<EditAuction />} />
         <Route path="/auction-bundles/:id" element={<AuctionBundles />} />
+        <Route path="/auction-clients/:id" element={<AuctionClients />} />
         <Route path="/add-sale/:auctionId" element={<AddSale />} />
         <Route path="/edit-sale/:auctionId/:id" element={<EditSale />} />
-        <Route path="/sellers" element={<Sellers />} />
-        <Route path="/add-seller" element={<AddSeller />} />
-        <Route path="/edit-seller/:id" element={<EditSeller />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/add-client" element={<AddClient />} />
         <Route path="/edit-client/:id" element={<EditClient />} />

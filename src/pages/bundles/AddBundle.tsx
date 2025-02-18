@@ -47,7 +47,7 @@ export const AddBundle = () => {
     if (!db) return [];
     try {
       const result: any[] = await db.select(
-        "SELECT id, company FROM seller WHERE company LIKE ? ",
+        "SELECT id, company FROM client WHERE company LIKE ? ",
         [`%${inputValue}%`]
       );
 
@@ -84,7 +84,6 @@ export const AddBundle = () => {
   const onSubmit = async (data: BundleFormData) => {
     if (!db) return;
     try {
-      console.log("DATA", data);
       await db.execute(
         "INSERT INTO bundle (number, name, observations, seller_id, auction_id) VALUES (?1, ?2, ?3, ?4, ?5);",
         [

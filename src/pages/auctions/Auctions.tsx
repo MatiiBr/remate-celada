@@ -7,6 +7,7 @@ import {
   PlayIcon,
   PlayPauseIcon,
   TrashIcon,
+  UserGroupIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
 import { ContentLayout } from "../../components/ContentLayout";
@@ -309,8 +310,7 @@ export const Auctions = () => {
                               <ArrowUturnLeftIcon className="size-6 text-red-700" />
                             </button>
                           )}
-                        {auction.status === AUCTION_STATUSES.PENDIENTE &&
-                          isToday(parseISO(auction.date)) && (
+                        {auction.status === AUCTION_STATUSES.PENDIENTE && (
                             <button
                               className="cursor-pointer"
                               title="Comenzar"
@@ -328,6 +328,13 @@ export const Auctions = () => {
                               <PlayIcon className="size-6 text-red-700" />
                             </button>
                           )}
+                        <Link
+                          title="Clientes"
+                          className="cursor-pointer"
+                          to={`/auction-clients/${auction.id}`}
+                        >
+                          <UserGroupIcon className="size-6 text-red-700" />
+                        </Link>
                         <Link
                           title="Ver Lotes"
                           className="cursor-pointer"

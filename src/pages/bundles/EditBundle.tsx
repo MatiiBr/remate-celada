@@ -45,7 +45,7 @@ export const EditBundle = () => {
     if (!db) return [];
     try {
       const result: any[] = await db.select(
-        "SELECT id, company FROM seller WHERE company LIKE ?",
+        "SELECT id, company FROM client WHERE company LIKE ?",
         [`%${inputValue}%`]
       );
 
@@ -64,9 +64,9 @@ export const EditBundle = () => {
       if (!db || !id) return;
       try {
         const result: any[] = await db.select(
-          `SELECT bundle.*, seller.id as seller_id, seller.company as seller_company 
+          `SELECT bundle.*, client.id as seller_id, client.company as seller_company 
            FROM bundle 
-           JOIN seller ON bundle.seller_id = seller.id 
+           JOIN client ON bundle.seller_id = client.id 
            WHERE bundle.id = ?`,
           [id]
         );
